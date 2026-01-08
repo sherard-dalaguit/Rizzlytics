@@ -4,6 +4,7 @@ import React, {useEffect, useState} from 'react'
 import {IMediaAssetDoc} from "@/database/media-asset.model";
 import Image from 'next/image';
 import {Button} from "@/components/ui/button";
+import {IconX} from "@tabler/icons-react";
 
 const PhotosPage = () => {
   const [mediaAssets, setMediaAssets] = useState<IMediaAssetDoc[]>([]);
@@ -66,11 +67,11 @@ const PhotosPage = () => {
           />
 
           <Button
-            className="absolute top-2 right-2 rounded-full bg-black/60 text-white px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition"
+            className="absolute top-2 left-2 h-8 w-8 rounded-full bg-black/60 text-white px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition"
             onClick={() => handleDelete(asset._id.toString())}
             type="button"
           >
-            ×
+            <IconX className="h-6 w-6" />
           </Button>
         </div>
       ))}
