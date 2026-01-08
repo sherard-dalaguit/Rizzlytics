@@ -52,3 +52,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   return NextResponse.json({ blob, mediaAsset });
 }
 
+export async function GET(_: Request): Promise<NextResponse> {
+  await dbConnect();
+
+  const mediaAssets = await MediaAsset.find();
+  if (!mediaAssets) {
+    return NextResponse.json({ error: "No media assets found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ mediaAssets });
+}
