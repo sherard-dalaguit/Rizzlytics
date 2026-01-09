@@ -56,7 +56,7 @@ const PhotosPage = () => {
   }
 
   return (
-    <section className="grid grid-cols-3 gap-4">
+    <section className="grid grid-cols-4 gap-4">
       {mediaAssets.map((asset: IMediaAssetDoc) => (
         <div key={asset._id.toString()} className="relative group">
           <Image
@@ -64,6 +64,7 @@ const PhotosPage = () => {
             alt="user photo"
             width={200}
             height={200}
+            className="rounded-xl"
           />
 
           <Button
