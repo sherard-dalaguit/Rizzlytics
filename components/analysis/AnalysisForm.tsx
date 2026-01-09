@@ -213,8 +213,15 @@ const AnalysisForm = ({ type }: { type: string }) => {
                       className="primary-gradient text-white px-12 py-6 self-center"
                       disabled={threadBlobs.length === 0}
                       onClick={async() => {
-                        // Handle context submission or processing here
-                        console.log("Context submitted:", contextInput);
+                        await fetch('/api/conversations', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            threadScreenshots: threadBlobs,
+                            otherProfileScreenshots: otherBlobs,
+                            context: contextInput,
+                          }),
+                        })
                       }}
                     >
                       Run Analysis
