@@ -4,10 +4,12 @@ import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTr
 import {Button} from "@/components/ui/button";
 import {FileUpload} from "@/components/ui/file-upload";
 import Image from "next/image";
-import {FormEvent, useRef, useState} from "react";
+import {useRef, useState} from "react";
 import type {PutBlobResult} from "@vercel/blob";
 import {IMediaAsset} from "@/database/media-asset.model";
 import {cn} from "@/lib/utils";
+import {ITranscriptMessage} from "@/database/conversation-snapshot.model";
+import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreenshot";
 
 type UploadResponse = {
   blob: PutBlobResult;
@@ -61,6 +63,92 @@ const AnalysisForm = ({ type }: { type: string }) => {
     return data.blob;
   }
 
+  const handleSubmitPhoto = async () => {
+    const selected = getSelectedFiles();
+    if (!selected.length) throw new Error("No file selected");
+
+    const uploaded = await uploadOne(selected[0], "self_photo");
+    setBlob(uploaded);
+  }
+
+  const handleSubmitThreadScreenshots = async() => {
+    if (!threadFiles.length) throw new Error("No files selected");
+
+    const uploaded = await Promise.all(
+      threadFiles.map((file) => uploadOne(file, "chat_screenshot"))
+    );
+    setThreadBlobs(uploaded);
+  }
+
+  const handleSubmitOtherProfileScreenshots = async() => {
+    if (!otherFiles.length) return;
+
+    const uploaded = await Promise.all(
+      otherFiles.map((file) => uploadOne(file, "other_profile_photo"))
+    );
+    setOtherBlobs(uploaded);
+  }
+
+  const handleSubmitConversationSnapshot = async() => {
+    const response = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        threadScreenshots: threadBlobs,
+        otherProfileScreenshots: otherBlobs,
+        context: contextInput,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create conversation snapshot: ${response.status} ${response.statusText}`);
+    }
+    const { conversationSnapshot } = await response.json();
+
+    if (!conversationSnapshot) {
+      throw new Error('Failed to create conversation snapshot');
+    }
+
+    const extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
+
+    for (const threadBlob of threadBlobs) {
+      const messages = await analyzeThreadScreenshot(threadBlob);
+
+      if (!messages?.length) {
+        throw new Error(`Failed to analyze thread screenshot: ${threadBlob.pathname}`);
+      }
+
+      extracted.push(...messages.map(m => ({ speaker: m.speaker, text: m.text })));
+    }
+
+    if (!extracted.length) {
+      throw new Error('Failed to extract transcript messages from screenshots');
+    }
+
+    const transcript: ITranscriptMessage[] = extracted.map((m, idx) => ({
+      order: idx + 1,
+      speaker: m.speaker,
+      text: m.text,
+    }))
+
+    console.log(transcript);
+
+    // once all messages are collected, edit conversationSnapshot transcript in MongoDB
+    const res = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript }),
+    });
+
+    if (!res.ok) {
+      const errorPayload = await res.json().catch(() => null);
+      throw new Error(
+        errorPayload?.error ??
+        `Failed to update conversation snapshot with transcript (status ${res.status})`
+      );
+    }
+  }
+
   return (
     <Dialog>
       <form>
@@ -89,13 +177,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                 <Button
                   className="primary-gradient text-white px-12 py-6"
                   type="button"
-                  onClick={async () => {
-                    const selected = getSelectedFiles();
-                    if (!selected.length) throw new Error("No file selected");
-
-                    const uploaded = await uploadOne(selected[0], "self_photo");
-                    setBlob(uploaded);
-                  }}
+                  onClick={handleSubmitPhoto}
                 >
                   Upload
                 </Button>
@@ -132,14 +214,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                     <Button
                       type="button"
                       className="primary-gradient text-white px-12 py-6"
-                      onClick={async() => {
-                        if (!threadFiles.length) throw new Error("No files selected");
-
-                        const uploaded = await Promise.all(
-                          threadFiles.map((file) => uploadOne(file, "chat_screenshot"))
-                        );
-                        setThreadBlobs(uploaded);
-                      }}
+                      onClick={handleSubmitThreadScreenshots}
                     >
                       Upload Thread Screenshots
                     </Button>
@@ -169,13 +244,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                     <Button
                       type="button"
                       className="primary-gradient text-white px-12 py-6"
-                      onClick={async() => {
-                        if (!otherFiles.length) return; // optional
-                        const uploaded = await Promise.all(
-                          otherFiles.map((file) => uploadOne(file, "other_profile_photo"))
-                        );
-                        setOtherBlobs(uploaded);
-                      }}
+                      onClick={handleSubmitOtherProfileScreenshots}
                     >
                       Upload Other Profile Screenshots
                     </Button>
@@ -212,17 +281,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                       type="button"
                       className="primary-gradient text-white px-12 py-6 self-center"
                       disabled={threadBlobs.length === 0}
-                      onClick={async() => {
-                        await fetch('/api/conversations', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            threadScreenshots: threadBlobs,
-                            otherProfileScreenshots: otherBlobs,
-                            context: contextInput,
-                          }),
-                        })
-                      }}
+                      onClick={handleSubmitConversationSnapshot}
                     >
                       Run Analysis
                     </Button>
