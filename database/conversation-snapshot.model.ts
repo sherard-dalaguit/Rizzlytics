@@ -1,7 +1,7 @@
 import { model, models, Schema, Types, Document} from "mongoose";
 
 export interface ITranscriptMessage {
-  order: number;
+  order?: number;
   speaker: "user" | "match" | "unknown";
   text: string;
 }
@@ -12,6 +12,7 @@ export interface IConversationSnapshot {
   threadScreenshotAssetIds: Types.ObjectId[];
   otherProfileAssetIds?: Types.ObjectId[];
   contextInput?: string;
+  otherProfileContext?: string;
 
   transcript: ITranscriptMessage[];
   rawExtractedText?: string;
@@ -24,7 +25,7 @@ export interface IConversationSnapshot {
 
 const TranscriptMessageSchema = new Schema<ITranscriptMessage>(
   {
-    order: { type: Number, required: true },
+    order: { type: Number },
     speaker: { type: String, enum: ["user", "match", "unknown"], required: true },
     text: { type: String, required: true },
   },
@@ -38,6 +39,7 @@ const ConversationSnapshotSchema = new Schema<IConversationSnapshot>(
     threadScreenshotAssetIds: { type: [Schema.Types.ObjectId], ref: "MediaAsset", required: true },
     otherProfileAssetIds: { type: [Schema.Types.ObjectId], ref: "MediaAsset" },
     contextInput: { type: String },
+    otherProfileContext: { type: String },
 
     transcript: { type: [TranscriptMessageSchema], required: true },
     rawExtractedText: { type: String },

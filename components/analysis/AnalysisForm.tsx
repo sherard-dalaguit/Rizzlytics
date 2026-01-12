@@ -10,6 +10,7 @@ import {IMediaAsset} from "@/database/media-asset.model";
 import {cn} from "@/lib/utils";
 import {ITranscriptMessage} from "@/database/conversation-snapshot.model";
 import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreenshot";
+import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot";
 
 type UploadResponse = {
   blob: PutBlobResult;
@@ -145,6 +146,34 @@ const AnalysisForm = ({ type }: { type: string }) => {
       throw new Error(
         errorPayload?.error ??
         `Failed to update conversation snapshot with transcript (status ${res.status})`
+      );
+    }
+
+    if (!otherBlobs?.length) return;
+    let otherAnalyses: string = '';
+
+    // Optionally analyze other profile screenshots
+    for (const otherBlob of otherBlobs) {
+      const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
+
+      if (!otherAnalysis) {
+        throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
+      }
+
+      otherAnalyses += " " + otherAnalysis.trim();
+    }
+
+    const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otherProfileAnalyses: otherAnalyses }),
+    })
+
+    if (!finalRes.ok) {
+      const errorPayload = await finalRes.json().catch(() => null);
+      throw new Error(
+        errorPayload?.error ??
+        `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
       );
     }
   }
