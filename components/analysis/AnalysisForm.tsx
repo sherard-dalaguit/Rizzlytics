@@ -192,6 +192,21 @@ const AnalysisForm = ({ type }: { type: string }) => {
         `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
       );
     }
+
+    const analyzeResponse = await fetch(`/api/ai-analysis/conversation/${conversationSnapshot._id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'conversation',
+        transcript,
+        contextInput,
+        otherProfileContext: otherAnalyses,
+      }),
+    })
+
+    if (!analyzeResponse) {
+      throw new Error('Failed to analyze conversation snapshot');
+    }
   }
 
   return (
