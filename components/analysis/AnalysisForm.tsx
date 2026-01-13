@@ -6,7 +6,7 @@ import {FileUpload} from "@/components/ui/file-upload";
 import Image from "next/image";
 import {useRef, useState} from "react";
 import type {PutBlobResult} from "@vercel/blob";
-import {IMediaAsset} from "@/database/media-asset.model";
+import {IMediaAssetDoc} from "@/database/media-asset.model";
 import {cn} from "@/lib/utils";
 import {ITranscriptMessage} from "@/database/conversation-snapshot.model";
 import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreenshot";
@@ -14,7 +14,7 @@ import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot
 
 type UploadResponse = {
   blob: PutBlobResult;
-  mediaAsset: IMediaAsset;
+  mediaAsset: IMediaAssetDoc;
 }
 
 const AnalysisForm = ({ type }: { type: string }) => {
@@ -60,34 +60,50 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
     if (!response.ok) throw new Error(`Failed to upload file: ${file.name}`);
 
-    const data = (await response.json()) as UploadResponse;
-    return data.blob;
+    return (await response.json()) as UploadResponse;
   }
 
   const handleSubmitPhoto = async () => {
     const selected = getSelectedFiles();
     if (!selected.length) throw new Error("No file selected");
 
-    const uploaded = await uploadOne(selected[0], "self_photo");
-    setBlob(uploaded);
+    const { blob, mediaAsset } = await uploadOne(selected[0], "self_photo");
+    setBlob(blob);
+
+    const analyzeResponse = await fetch(`/api/ai-analysis/photo/${mediaAsset._id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'photo',
+        photoUrl: blob.url,
+      }),
+    });
+
+    if (!analyzeResponse) {
+      throw new Error('Failed to analyze photo');
+    }
   }
 
   const handleSubmitThreadScreenshots = async() => {
     if (!threadFiles.length) throw new Error("No files selected");
 
-    const uploaded = await Promise.all(
+    const uploads = await Promise.all(
       threadFiles.map((file) => uploadOne(file, "chat_screenshot"))
     );
-    setThreadBlobs(uploaded);
+
+    const blobs = uploads.map(u => u.blob);
+    setThreadBlobs(blobs);
   }
 
   const handleSubmitOtherProfileScreenshots = async() => {
     if (!otherFiles.length) return;
 
-    const uploaded = await Promise.all(
+    const uploads = await Promise.all(
       otherFiles.map((file) => uploadOne(file, "other_profile_photo"))
     );
-    setOtherBlobs(uploaded);
+
+    const blobs = uploads.map(u => u.blob);
+    setOtherBlobs(blobs);
   }
 
   const handleSubmitConversationSnapshot = async() => {

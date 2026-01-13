@@ -7,9 +7,7 @@ export interface IAnalysis {
   status: "queued" | "succeeded" | "failed";
 
   conversationId?: Types.ObjectId;
-  selfPhotoAssetIds?: Types.ObjectId[];
-  otherPhotoAssetIds?: Types.ObjectId[];
-  contextInput?: string;
+  selfPhotoAssetId?: Types.ObjectId;
 
   result: {
     summary: string;
@@ -21,7 +19,10 @@ export interface IAnalysis {
       uncertain: string[];
     }
     nextSteps: string[];
-    rating: string;
+    rating: {
+      overall: string;
+      confidence: number;
+    };
     suggestedReplies?: {
       text: string;
       tone: string;
@@ -44,22 +45,25 @@ const AnalysisSchema = new Schema<IAnalysis>(
     status: { type: String, enum: ["queued", "succeeded", "failed"], required: true },
 
     conversationId: { type: Schema.Types.ObjectId, ref: "ConversationSnapshot" },
-    selfPhotoAssetIds: { type: [Schema.Types.ObjectId], ref: "MediaAsset" },
-    otherPhotoAssetIds: { type: [Schema.Types.ObjectId], ref: "MediaAsset" },
-    contextInput: { type: String },
+    selfPhotoAssetId: { type: Schema.Types.ObjectId, ref: "MediaAsset" },
 
     result: {
       summary: { type: String, required: true },
       strengths: { type: [String], required: true },
       weaknesses: { type: [String], required: true },
       attractionSignals: {
-        positive: { type: [String], required: true },
-        negative: { type: [String], required: true },
-        uncertain: { type: [String], required: true },
+        type: {
+          positive: { type: [String], required: true },
+          negative: { type: [String], required: true },
+          uncertain: { type: [String], required: true },
+        },
         required: true
       },
       nextSteps: { type: [String], required: true },
-      rating: { type: String, required: true },
+      rating: {
+        overall: { type: String, enum: ["poor", "mixed", "good", "strong"], required: true },
+        confidence: { type: Number, min: 0, max: 1, required: true },
+      },
       suggestedReplies: [{
         text: { type: String, required: true },
         tone: { type: String, required: true },

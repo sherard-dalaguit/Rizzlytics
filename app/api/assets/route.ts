@@ -1,6 +1,6 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
-import MediaAsset from "@/database/media-asset.model";
+import MediaAsset, {IMediaAssetDoc} from "@/database/media-asset.model";
 import dbConnect from "@/lib/mongoose";
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -39,7 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const userId = /* get this from auth session later */ undefined as any;
 
-  const mediaAsset = await MediaAsset.create({
+  const mediaAsset: IMediaAssetDoc = await MediaAsset.create({
     userId,
     assetType: "image",
     category,
