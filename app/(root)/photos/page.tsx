@@ -56,7 +56,7 @@ const PhotosPage = () => {
   }
 
   return (
-    <section className="grid grid-cols-4 gap-4">
+    <section className="grid grid-cols-4 max-w-5xl mx-auto gap-4">
       {mediaAssets.map((asset: IMediaAssetDoc) => (
         <div key={asset._id.toString()} className="relative group">
           <Image
