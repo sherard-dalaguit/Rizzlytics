@@ -3,6 +3,19 @@ import { del } from '@vercel/blob';
 import MediaAsset from "@/database/media-asset.model";
 import {NextResponse} from "next/server";
 
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const { id } = await params;
+
+  await dbConnect()
+
+  const mediaAsset = await MediaAsset.findById(id);
+  if (!mediaAsset) {
+    return NextResponse.json({ error: "MediaAsset not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ mediaAsset });
+}
+
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 

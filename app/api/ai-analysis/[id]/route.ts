@@ -7,7 +7,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   await dbConnect()
 
-  const analysis = await Analysis.findById(id);
+  const analysis = await Analysis.findById(id)
+    .lean()
+    .populate({
+      path: "conversationId",
+      select: "threadScreenshotAssetIds otherProfileAssetIds contextInput"
+    });
   if (!analysis) {
     return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }

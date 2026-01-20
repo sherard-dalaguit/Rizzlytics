@@ -1,6 +1,8 @@
 import React from "react";
 import {
   capitalize,
+  fetchMediaAsset,
+  fetchMediaAssets,
   outcomeVariant,
   pickHeadlineAndBullets,
   toPercentage,
@@ -8,12 +10,82 @@ import {
 import { Badge } from "@/components/ui/badge";
 import CopyButton from "@/components/ai-review/CopyButton";
 import NextStepsDialog from "@/components/ai-review/next-steps-dialogue";
+import Image from "next/image";
+import {
+  Dialog,
+  DialogContent, DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
+const ImageGrid = ({
+  title,
+  urls,
+}: {
+  title: string;
+  urls: string[];
+}) => {
+  if (!urls.length) return null;
+
+  return (
+    <div className="rounded-2xl border bg-muted/20 p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <Badge variant="outline">{urls.length}</Badge>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {urls.map((url, idx) => (
+          <Dialog key={`${title}-${idx}`}>
+            <DialogTrigger asChild>
+              <button className="group text-left">
+                <div className="relative w-full overflow-hidden rounded-xl border bg-background/40">
+                  <div className="relative aspect-3/4 w-full">
+                    <Image
+                      src={url}
+                      alt={`${title} ${idx + 1}`}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-[1.02]"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+                    />
+                  </div>
+
+                  <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-2">
+                    <p className="text-[11px] text-white/90">
+                      Click to expand
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-4xl p-6 overflow-hidden">
+              <DialogTitle>{title}</DialogTitle>
+
+              <div className="relative w-full">
+                {/* Tall-friendly container; screenshots are usually portrait */}
+                <div className="relative w-full max-h-[80vh] aspect-3/4 mx-auto">
+                  <Image
+                    src={url}
+                    alt={`${title} (expanded) ${idx + 1}`}
+                    fill
+                    className="object-contain rounded-xl"
+                    sizes="(max-width: 1024px) 100vw, 900px"
+                  />
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
@@ -35,11 +107,39 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     );
   }
 
+  // 1) Parse
   const { analysis } = await response.json();
   const { result } = analysis;
 
+  // 2) Normalize “source” shape
+  const isConversation = analysis.type === "conversation";
+  const conversation = isConversation ? analysis.conversationId : null; // populated doc (or null)
+  const photoAssetId = !isConversation ? analysis.selfPhotoAssetId : null;
+
+  // 3) Extract ids (no fetching yet)
+  const threadIds: string[] = conversation?.threadScreenshotAssetIds ?? [];
+  const otherProfileIds: string[] = conversation?.otherProfileAssetIds ?? [];
+  const contextText: string | null = conversation?.contextInput ?? null;
+
+  // 4) Fetch assets (single block)
+  const [
+    photoAsset,
+    threadAssets,
+    otherProfileAssets,
+  ] = await Promise.all([
+    photoAssetId ? fetchMediaAsset(photoAssetId.toString()) : Promise.resolve(null),
+    threadIds.length ? fetchMediaAssets(threadIds) : Promise.resolve([]),
+    otherProfileIds.length ? fetchMediaAssets(otherProfileIds) : Promise.resolve([]),
+  ]);
+
+  // 5) Map to urls (UI-ready)
+  const photoUrl = photoAsset?.blobUrl ?? null;
+  const threadUrls = threadAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
+  const otherProfileUrls = otherProfileAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
+
+  // 6) UI helpers
   const { headline, bullets } = pickHeadlineAndBullets(result.summary);
-  const hasSuggestedReplies = result.suggestedReplies?.length > 0;
+  const hasSuggestedReplies = (result.suggestedReplies?.length ?? 0) > 0;
 
   const topSignalsCount = 2;
   const topBreakdownCount = 3;
@@ -285,15 +385,104 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </div>
           </section>
 
-          {/* ===== Supporting context ===== */}
-          <section className="space-y-2">
+          <section className="space-y-3">
             <h2 className="text-2xl font-semibold">Supporting context</h2>
             <p className="text-sm text-muted-foreground">
               {analysis.type === "photo"
-                ? "View the analyzed photo and its placement context below."
-                : "View the original conversation transcript below."}
+                ? "View the analyzed photo below."
+                : "View the screenshots and any added context below."}
             </p>
+
+            {/* PHOTO MODE */}
+            {analysis.type === "photo" && (
+              <div className="rounded-2xl border bg-muted/20 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Analyzed photo</h3>
+                  <Badge variant="outline">1</Badge>
+                </div>
+
+                {!photoUrl ? (
+                  <p className="text-sm text-muted-foreground">
+                    Photo not available (missing asset URL).
+                  </p>
+                ) : (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="group w-full text-left">
+                        <div className="relative w-full overflow-hidden rounded-xl border bg-background/40">
+                          <div className="max-w-sm mx-auto">
+                            <div className="relative aspect-3/4 w-full overflow-hidden rounded-xl border">
+                              <Image
+                                src={photoUrl}
+                                alt="Analyzed photo"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-3">
+                            <p className="text-xs text-white/90">Click to expand</p>
+                          </div>
+                        </div>
+                      </button>
+                    </DialogTrigger>
+
+                    <DialogContent className="max-w-3xl p-8 overflow-hidden">
+                      <DialogTitle>Analyzed photo</DialogTitle>
+
+                      <div className="relative w-full">
+                        <div className="relative w-full max-h-[80vh] aspect-3/4 mx-auto">
+                          <Image
+                            src={photoUrl}
+                            alt="Analyzed photo (expanded)"
+                            fill
+                            className="object-contain rounded-xl"
+                            sizes="(max-width: 1024px) 100vw, 900px"
+                          />
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            )}
+
+            {/* CONVERSATION MODE */}
+            {analysis.type === "conversation" && (
+              <div className="space-y-4">
+                {/* Optional context input */}
+                {contextText && contextText.trim().length > 0 && (
+                  <div className="rounded-2xl border bg-muted/20 p-5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Extra context</h3>
+                      <Badge variant="outline">Optional</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {contextText}
+                    </p>
+                  </div>
+                )}
+
+                {/* Thread screenshots (required) */}
+                {threadUrls.length === 0 ? (
+                  <div className="rounded-2xl border bg-muted/20 p-5">
+                    <p className="text-sm text-muted-foreground">
+                      Thread screenshots not available (missing asset URLs).
+                    </p>
+                  </div>
+                ) : (
+                  <ImageGrid title="Thread screenshots" urls={threadUrls} />
+                )}
+
+                {/* Other profile screenshots (optional) */}
+                {otherProfileUrls.length > 0 && (
+                  <ImageGrid title="Other profile screenshots" urls={otherProfileUrls} />
+                )}
+              </div>
+            )}
           </section>
+
         </div>
 
         {/* ================= SIDEBAR (RIGHT) ================= */}
@@ -400,7 +589,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
               )}
             </div>
           )}
-
 
           {/* Meta */}
           <div className="rounded-2xl border p-5 bg-muted/20 space-y-2">

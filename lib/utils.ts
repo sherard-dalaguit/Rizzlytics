@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import {IMediaAssetDoc} from "@/database/media-asset.model";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -38,4 +39,22 @@ export function outcomeVariant(outcome: string) {
   if (o.includes("mixed") || o.includes("medium")) return "secondary";
   if (o.includes("weak") || o.includes("low") || o.includes("bad")) return "destructive";
   return "outline";
+}
+
+export async function fetchMediaAsset(assetId: string): Promise<IMediaAssetDoc | null> {
+  const response = await fetch(`http://localhost:3000/api/assets/${assetId}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response) return null;
+
+  const { mediaAsset } = await response.json();
+  return mediaAsset;
+}
+
+export async function fetchMediaAssets(ids: string[]) {
+  const assets = await Promise.all(ids.map((id) => fetchMediaAsset(id)));
+  return assets.filter(Boolean);
 }
