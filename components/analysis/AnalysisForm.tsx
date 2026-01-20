@@ -11,6 +11,7 @@ import {cn} from "@/lib/utils";
 import {ITranscriptMessage} from "@/database/conversation-snapshot.model";
 import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreenshot";
 import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot";
+import {useRouter} from "next/navigation";
 
 type UploadResponse = {
   blob: PutBlobResult;
@@ -18,6 +19,8 @@ type UploadResponse = {
 }
 
 const AnalysisForm = ({ type }: { type: string }) => {
+  const router = useRouter();
+
   const [step, setStep] = useState(0);
 
   const inputFileRef = useRef<HTMLInputElement>(null);
@@ -82,6 +85,10 @@ const AnalysisForm = ({ type }: { type: string }) => {
     if (!analyzeResponse) {
       throw new Error('Failed to analyze photo');
     }
+
+    const { analysis } = await analyzeResponse.json()
+
+    router.push(`/ai-review/${analysis._id}`);
   }
 
   const handleSubmitThreadScreenshots = async() => {
@@ -165,32 +172,32 @@ const AnalysisForm = ({ type }: { type: string }) => {
       );
     }
 
-    if (!otherBlobs?.length) return;
     let otherAnalyses: string = '';
 
-    // Optionally analyze other profile screenshots
-    for (const otherBlob of otherBlobs) {
-      const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
+    if (otherBlobs?.length) {
+      for (const otherBlob of otherBlobs) {
+        const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
 
-      if (!otherAnalysis) {
-        throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
+        if (!otherAnalysis) {
+          throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
+        }
+
+        otherAnalyses += " " + otherAnalysis.trim();
       }
 
-      otherAnalyses += " " + otherAnalysis.trim();
-    }
+      const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({otherProfileAnalyses: otherAnalyses}),
+      })
 
-    const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ otherProfileAnalyses: otherAnalyses }),
-    })
-
-    if (!finalRes.ok) {
-      const errorPayload = await finalRes.json().catch(() => null);
-      throw new Error(
-        errorPayload?.error ??
-        `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
-      );
+      if (!finalRes.ok) {
+        const errorPayload = await finalRes.json().catch(() => null);
+        throw new Error(
+          errorPayload?.error ??
+          `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
+        );
+      }
     }
 
     const analyzeResponse = await fetch(`/api/ai-analysis/conversation/${conversationSnapshot._id}`, {
@@ -207,6 +214,10 @@ const AnalysisForm = ({ type }: { type: string }) => {
     if (!analyzeResponse) {
       throw new Error('Failed to analyze conversation snapshot');
     }
+
+    const { analysis: conversationAnalysis } = await analyzeResponse.json()
+
+    router.push(`/ai-review/${conversationAnalysis._id}`);
   }
 
   return (
