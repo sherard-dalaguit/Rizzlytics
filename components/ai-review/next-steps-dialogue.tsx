@@ -26,7 +26,7 @@ export default function NextStepsDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" className="w-full">
+        <Button className="primary-gradient text-white w-full">
           See all next steps
         </Button>
       </DialogTrigger>

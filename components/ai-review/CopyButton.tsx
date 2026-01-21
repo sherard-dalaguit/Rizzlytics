@@ -8,6 +8,7 @@ type Props = {
   children?: React.ReactNode;
   size?: "default" | "sm" | "lg" | "icon";
   variant?: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
+  className?: string;
 };
 
 export default function CopyButton({
@@ -15,6 +16,7 @@ export default function CopyButton({
   children = "Copy",
   size = "sm",
   variant = "outline",
+  className,
 }: Props) {
   const [copied, setCopied] = React.useState(false);
 
@@ -38,7 +40,7 @@ export default function CopyButton({
   };
 
   return (
-    <Button onClick={onCopy} size={size} variant={variant}>
+    <Button onClick={onCopy} size={size} variant={variant} className={className}>
       {copied ? "Copied" : children}
     </Button>
   );

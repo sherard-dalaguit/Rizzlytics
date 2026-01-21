@@ -43,7 +43,7 @@ const ImageGrid = ({
         {urls.map((url, idx) => (
           <Dialog key={`${title}-${idx}`}>
             <DialogTrigger asChild>
-              <button className="group text-left">
+              <button className="group w-full text-left">
                 <div className="relative w-full overflow-hidden rounded-xl border bg-background/40">
                   <div className="relative aspect-3/4 w-full">
                     <Image
@@ -55,10 +55,16 @@ const ImageGrid = ({
                     />
                   </div>
 
-                  <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-2">
-                    <p className="text-[11px] text-white/90">
-                      Click to expand
-                    </p>
+                  <div className="absolute inset-x-0 bottom-0">
+                    {/* Gradient fade layer */}
+                    <div className="absolute inset-0 primary-gradient opacity-70 transition-opacity duration-200 group-hover:opacity-90 mask-[linear-gradient(to_top,black,transparent)]" />
+
+                    {/* Text layer (unmasked) */}
+                    <div className="relative p-3">
+                      <p className="text-xs text-white font-medium drop-shadow-sm">
+                        Click to expand
+                      </p>
+                    </div>
                   </div>
                 </div>
               </button>
@@ -160,34 +166,37 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     <main className="max-w-7xl mx-auto px-6 py-10">
       {/* ================= HERO HEADER ================= */}
       <section className="mb-10">
-        <div className="rounded-2xl border bg-muted/20 px-6 py-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-semibold leading-tight">
-                {capitalize(analysis.type)} Analysis
-              </h1>
+        <div className="rounded-2xl border bg-muted/20 px-6 py-6 relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 opacity-30 primary-gradient blur-3xl" />
+          <div className="relative">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-semibold leading-tight primary-text-gradient">
+                  {capitalize(analysis.type)} Analysis
+                </h1>
 
-              <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
-                <Badge variant="outline">{capitalize(analysis.status)}</Badge>
-                <span>Confidence: {toPercentage(result.rating.confidence)}</span>
-                <Badge variant={outcomeVariant(result.rating.overall)}>
-                  Outcome: {capitalize(result.rating.overall)}
-                </Badge>
+                <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                  <Badge variant="outline">{capitalize(analysis.status)}</Badge>
+                  <span>Confidence: {toPercentage(result.rating.confidence)}</span>
+                  <Badge variant={outcomeVariant(result.rating.overall)}>
+                    Outcome: {capitalize(result.rating.overall)}
+                  </Badge>
+                </div>
               </div>
+
+              {/* Optional quick action on header */}
+              {hasSuggestedReplies && (
+                <div className="flex gap-2 md:pt-1">
+                  <CopyButton
+                    value={result.suggestedReplies![0]?.text ?? ""}
+                    size="sm"
+                    className="primary-gradient text-white border-0 hover:opacity-95"
+                  >
+                    Copy top reply
+                  </CopyButton>
+                </div>
+              )}
             </div>
-
-            {/* Optional quick action on header */}
-            {hasSuggestedReplies && (
-              <div className="flex gap-2 md:pt-1">
-                <CopyButton
-                  value={result.suggestedReplies![0]?.text ?? ""}
-                  size="sm"
-                  variant="outline"
-                >
-                  Copy top reply
-                </CopyButton>
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -199,13 +208,14 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           {/* ===== Overall diagnosis (hero) ===== */}
           <section className="space-y-3">
             <div className="flex items-end justify-between">
-              <h2 className="text-2xl font-semibold">Overall diagnosis</h2>
+              <h2 className="text-2xl font-semibold primary-text-gradient">Overall diagnosis</h2>
               <span className="text-xs text-muted-foreground">
                 Read time: ~30s
               </span>
             </div>
 
-            <div className="rounded-2xl border bg-muted/30 p-6 space-y-4">
+            <div className="rounded-2xl border bg-muted/30 p-6 space-y-4 relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
               <p className="text-lg font-medium leading-relaxed">{headline}</p>
 
               {bullets.length > 0 && (
@@ -224,7 +234,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           {/* ===== Attraction signals (compact + expand) ===== */}
           <section className="space-y-3">
             <div className="flex items-end justify-between">
-              <h2 className="text-2xl font-semibold">Attraction signals</h2>
+              <h2 className="text-2xl font-semibold primary-text-gradient">Attraction signals</h2>
               <span className="text-xs text-muted-foreground">
                 Scan first, expand if needed
               </span>
@@ -298,7 +308,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
           {/* ===== Breakdown (compact + expand) ===== */}
           <section className="space-y-3">
-            <h2 className="text-2xl font-semibold">Breakdown</h2>
+            <h2 className="text-2xl font-semibold primary-text-gradient">Breakdown</h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* What worked */}
@@ -386,7 +396,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-2xl font-semibold">Supporting context</h2>
+            <h2 className="text-2xl font-semibold primary-text-gradient">Supporting context</h2>
             <p className="text-sm text-muted-foreground">
               {analysis.type === "photo"
                 ? "View the analyzed photo below."
@@ -421,8 +431,16 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                             </div>
                           </div>
 
-                          <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-3">
-                            <p className="text-xs text-white/90">Click to expand</p>
+                          <div className="absolute inset-x-0 bottom-0">
+                            {/* Gradient fade layer */}
+                            <div className="absolute inset-0 primary-gradient opacity-70 transition-opacity duration-200 group-hover:opacity-90 mask-[linear-gradient(to_top,black,transparent)]" />
+
+                            {/* Text layer (unmasked) */}
+                            <div className="relative p-3">
+                              <p className="text-xs text-white font-medium drop-shadow-sm">
+                                Click to expand
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </button>
@@ -488,7 +506,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         {/* ================= SIDEBAR (RIGHT) ================= */}
         <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 h-fit">
           {/* Next steps */}
-          <div className="rounded-2xl border p-5 bg-muted/20 space-y-4">
+          <div className="rounded-2xl border p-5 bg-muted/20 space-y-4 relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">What to do next</h2>
               <Badge variant="outline">
