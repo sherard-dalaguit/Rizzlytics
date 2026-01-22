@@ -55,7 +55,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 export async function GET(_: Request): Promise<NextResponse> {
   await dbConnect();
 
-  const mediaAssets = await MediaAsset.find();
+  const mediaAssets = await MediaAsset
+    .find({ category: "self_photo" })
+    .sort({ createdAt: -1 });
+
   if (!mediaAssets) {
     return NextResponse.json({ error: "No media assets found" }, { status: 404 });
   }

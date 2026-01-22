@@ -58,3 +58,20 @@ export async function fetchMediaAssets(ids: string[]) {
   const assets = await Promise.all(ids.map((id) => fetchMediaAsset(id)));
   return assets.filter(Boolean);
 }
+
+export function shortId(id: string) {
+  return id.slice(-6);
+}
+
+export function formatDate(d: any) {
+  if (!d) return "Unknown date";
+  try {
+    return new Date(d).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "Unknown date";
+  }
+}
