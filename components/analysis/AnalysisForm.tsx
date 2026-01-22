@@ -227,6 +227,16 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
     const { analysis: conversationAnalysis } = await analyzeResponse.json()
 
+    const addAnalysisResponse = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysisId: conversationAnalysis._id }),
+    })
+
+    if (!addAnalysisResponse) {
+      throw new Error('Failed to link analysis to conversation snapshot');
+    }
+
     router.push(`/ai-review/${conversationAnalysis._id}`);
   }
 

@@ -17,6 +17,8 @@ export interface IConversationSnapshot {
   transcript: ITranscriptMessage[];
   rawExtractedText?: string;
 
+  analysisId?: Types.ObjectId;
+
   extraction: {
     status: "queued" | "succeeded" | "failed";
     warnings?: string[];
@@ -43,6 +45,8 @@ const ConversationSnapshotSchema = new Schema<IConversationSnapshot>(
 
     transcript: { type: [TranscriptMessageSchema], required: true },
     rawExtractedText: { type: String },
+
+    analysisId: { type: Schema.Types.ObjectId, ref: "Analysis" },
 
     extraction: {
       status: { type: String, enum: ["queued", "succeeded", "failed"], required: true },
