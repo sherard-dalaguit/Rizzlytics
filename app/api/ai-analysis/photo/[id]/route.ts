@@ -31,20 +31,3 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   return NextResponse.json({ analysis });
 }
-
-export async function GET(_: Request, { params }: { params: Promise<{ mediaAssetId: string }> }): Promise<NextResponse> {
-  const { mediaAssetId } = await params;
-
-  await dbConnect()
-
-  const analysis = await Analysis
-    .findOne({ selfPhotoAssetId: mediaAssetId })
-    .sort({ createdAt: -1 })
-    .lean();
-
-  if (!analysis) {
-    return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ analysis });
-}
