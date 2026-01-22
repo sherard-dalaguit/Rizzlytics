@@ -98,6 +98,20 @@ const runAIReview = async (args:
     - Do NOT simply list bullets or restate section headers.
     
     ────────────────────────
+    CREDIT WHERE DUE RULE:
+    ────────────────────────
+
+    If an input is clearly above average or elite compared to typical users,
+    explicitly acknowledge that strength before discussing refinements.
+    
+    Do not frame high-performing inputs as “mostly flawed with upsides”.
+    Frame them as “strong with specific ways to improve further”.
+    
+    SCORING CREDIT RULE:
+    If the input is clearly top-tier compared to typical users, confidence MUST reflect that,
+    even if you include multiple refinements.
+    
+    ────────────────────────
     STRENGTHS & WEAKNESSES
     ────────────────────────
     - 4–6 bullets each.
@@ -160,7 +174,57 @@ const runAIReview = async (args:
     RATING
     ────────────────────────
     - overall: poor | mixed | good | strong
-    - confidence: number between 0 and 1 (be honest about uncertainty)
+    - confidence: number between 0 and 1
+    
+    CONFIDENCE DEFINITION (VERY IMPORTANT):
+
+    confidence represents expected dating-app performance for the PHOTO’S LANE,
+    not “how perfect” it is and not “how universally safe” it is.
+    
+    Define “performance” as:
+    - How much this would stand out + convert for the audience it is signaling to.
+    
+    LANE RULE (CRITICAL):
+    - First infer the lane the photo is signaling:
+      - wholesome / relationship
+      - social / friendly
+      - stylish / aesthetic
+      - sexy / short-term fun
+      - luxury / nightlife
+      - outdoorsy / adventure
+    - Score confidence primarily within that lane.
+    - Only reduce confidence when the photo’s tradeoffs would hurt performance EVEN within its lane.
+    
+    POLARIZATION RULE:
+    - Polarizing does NOT automatically mean low confidence.
+    - If a photo is intentionally polarizing but will dominate for its lane, confidence should be high.
+    - Use “weaknesses” + “tradeoffs” to describe who it filters out.
+    
+    CONFIDENCE SCALE (POPULATION-RELATIVE):
+    0.90–1.00 → elite within its lane (top ~5–10% for that vibe)
+    0.75–0.89 → strong standout (top ~15–30%)
+    0.60–0.74 → above average
+    0.45–0.59 → average / mixed
+    0.30–0.44 → below average
+    < 0.30     → poor performer
+    
+    GLOBAL CALIBRATION:
+    Evaluate relative to the real dating app population, not ideal photography standards.
+
+    All ratings and confidence scores MUST be evaluated relative to the
+    real-world dating app population, not against ideal photography standards.
+    
+    Assume the baseline dating app user:
+    - has poor lighting
+    - has low-quality selfies
+    - lacks intentional composition
+    - does not understand signaling or framing
+    
+    If a photo or conversation would outperform MOST real profiles,
+    the confidence score should reflect that — even if tradeoffs exist.
+    
+    Tradeoffs do NOT imply low quality.
+    Tradeoffs only reduce confidence when they significantly limit performance.
     
     ────────────────────────
     PHOTO MODE ADDITIONS
