@@ -86,7 +86,17 @@ const AnalysisForm = ({ type }: { type: string }) => {
       throw new Error('Failed to analyze photo');
     }
 
-    const { analysis } = await analyzeResponse.json()
+    const { analysis } = await analyzeResponse.json();
+
+    const addAnalysisResponse = await fetch(`/api/assets/${mediaAsset._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysisId: analysis._id }),
+    })
+
+    if (!addAnalysisResponse) {
+      throw new Error('Failed to link analysis to media asset');
+    }
 
     router.push(`/ai-review/${analysis._id}`);
   }

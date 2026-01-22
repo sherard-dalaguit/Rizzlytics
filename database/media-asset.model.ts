@@ -5,12 +5,12 @@ export interface IMediaAsset {
   assetType: "image";
   category: "self_photo" | "other_profile_photo" | "chat_screenshot"
 
+  analysisId?: Types.ObjectId;
+
   storageProvider: "vercel_blob"
   blobUrl: string;
   blobPathname: string;
 
-  mimeType: string;
-  sizeBytes: number;
   width?: number;
   height?: number;
 
@@ -24,12 +24,12 @@ const MediaAssetSchema = new Schema<IMediaAsset>(
     assetType: { type: String, enum: ["image"], required: true },
     category: { type: String, enum: ["self_photo", "other_profile_photo", "chat_screenshot"], required: true },
 
+    analysisId: { type: Schema.Types.ObjectId, ref: "Analysis" },
+
     storageProvider: { type: String, enum: ["vercel_blob"], required: true },
     blobUrl: { type: String, required: true },
     blobPathname: { type: String, required: true },
 
-    mimeType: { type: String, required: true },
-    sizeBytes: { type: Number, required: true },
     width: { type: Number },
     height: { type: Number },
 
