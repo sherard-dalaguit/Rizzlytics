@@ -216,62 +216,77 @@ export default function PhotosPage() {
 
           {/* Preview dialog */}
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-4xl p-8 overflow-hidden">
-              <DialogHeader className="px-5 pt-5 pb-3">
-                <div className="flex items-center justify-between gap-3">
-                  <DialogTitle className="text-lg">
-                    Photo • {previewAsset ? shortId(previewAsset._id.toString()) : ""}
-                  </DialogTitle>
-                </div>
+            <DialogContent className="max-w-6xl p-0 overflow-hidden">
+              {/* Header */}
+              <DialogHeader className="px-5 py-4 backdrop-blur-xl border-b border-white/10 relative overflow-hidden">
+                <div className="pointer-events-none absolute inset-0 primary-gradient opacity-20 blur-3xl" />
+                <DialogTitle className="relative text-lg text-white">
+                  Photo • {previewAsset ? shortId(previewAsset._id.toString()) : ""}
+                </DialogTitle>
               </DialogHeader>
 
               {previewAsset && (
-                <div className="grid grid-cols-1 md:grid-cols-3">
-                  {/* image */}
-                  <div className="md:col-span-2 relative h-[70vh] bg-black">
-                    <Image
-                      src={(previewAsset as any).blobUrl}
-                      alt="preview"
-                      fill
-                      className="object-contain"
-                      sizes="(max-width: 1024px) 100vw, 900px"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-7">
+                  {/* Main image */}
+                  <div className="md:col-span-4 relative h-[72vh]">
+                    {/* subtle border frame */}
+                    <div className="absolute inset-3 rounded-2xl border border-white/10 overflow-hidden bg-black">
+                      <Image
+                        src={(previewAsset as any).blobUrl}
+                        alt="preview"
+                        fill
+                        className="object-contain"
+                        sizes="(max-width: 1024px) 100vw, 900px"
+                      />
+                    </div>
                   </div>
 
-                  {/* actions */}
-                  <div className="md:col-span-1 border-l bg-muted/10 p-5 space-y-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Actions</p>
-                      <p className="text-xs text-muted-foreground">
-                        AI Review lives in the analysis flow.
-                      </p>
+                  {/* Sidebar */}
+                  <div className="md:col-span-3 backdrop-blur-xl border-l border-white/10 p-4 space-y-4">
+                    {/* Info bubble (optional but makes it feel consistent/premium) */}
+                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md">
+                      <div className="relative p-3 z-10 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Details</p>
+                        <p className="text-xs text-white/85 leading-snug">
+                          Uploaded {formatDate((previewAsset as any).createdAt)} • ID{" "}
+                          {shortId(previewAsset._id.toString())}
+                        </p>
+                      </div>
+
+                      {/* subtle gradient accent */}
+                      <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none">
+                        <div className="absolute inset-0 primary-gradient opacity-20" />
+                      </div>
                     </div>
 
-                    <Button
-                      className="w-full"
-                      onClick={() => {
-                        window.location.href = `/ai-review/${previewAsset.analysisId}`;
-                      }}
-                      type="button"
-                    >
-                      <IconBrain className="h-5 w-5 mr-2" />
-                      View AI Review
-                    </Button>
+                    {/* Actions */}
+                    <div className="space-y-2">
+                      <Button
+                        className="w-full"
+                        onClick={() => {
+                          window.location.href = `/ai-review/${(previewAsset as any).analysisId}`;
+                        }}
+                        type="button"
+                      >
+                        <IconBrain className="h-5 w-5 mr-2" />
+                        View AI Review
+                      </Button>
 
-                    <Button
-                      className="w-full"
-                      variant="destructive"
-                      onClick={() => handleDelete(previewAsset._id.toString())}
-                      type="button"
-                    >
-                      <IconTrash className="h-5 w-5 mr-2" />
-                      Delete photo
-                    </Button>
+                      <Button
+                        className="w-full bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 hover:border-red-400/40"
+                        onClick={() => handleDelete(previewAsset._id.toString())}
+                        type="button"
+                      >
+                        <IconTrash className="h-5 w-5 mr-2" />
+                        Delete photo
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
             </DialogContent>
           </Dialog>
+
         </>
       )}
     </main>
