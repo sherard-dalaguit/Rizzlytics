@@ -82,11 +82,15 @@ const AnalysisForm = ({ type }: { type: string }) => {
       }),
     });
 
-    if (!analyzeResponse) {
-      throw new Error('Failed to analyze photo');
+    if (!analyzeResponse.ok) {
+      throw new Error(`Failed to analyze photo: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
     }
 
     const { analysis } = await analyzeResponse.json();
+
+    if (!analysis) {
+      throw new Error('Failed to analyze photo');
+    }
 
     const addAnalysisResponse = await fetch(`/api/assets/${mediaAsset._id}`, {
       method: 'PUT',
@@ -94,7 +98,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
       body: JSON.stringify({ analysisId: analysis._id }),
     })
 
-    if (!addAnalysisResponse) {
+    if (!addAnalysisResponse.ok) {
       throw new Error('Failed to link analysis to media asset');
     }
 

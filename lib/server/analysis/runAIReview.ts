@@ -43,6 +43,32 @@ export const AnalysisOutputSchema = z.object({
 
 export type AnalysisOutput = z.infer<typeof AnalysisOutputSchema>;
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function waitForImageReady(url: string, attempts = 6) {
+  let last = "";
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        headers: { Range: "bytes=0-0" },
+      });
+
+      const ct = res.headers.get("content-type") ?? "";
+      if (res.ok && ct.startsWith("image/")) return;
+
+      last = `status=${res.status} content-type=${ct}`;
+    } catch (e: any) {
+      last = e?.message ?? String(e);
+    }
+
+    await sleep(200 * Math.pow(2, i)); // 200, 400, 800, 1600...
+  }
+
+  throw new Error(`Image URL not ready: ${last}`);
+}
 
 const runAIReview = async (args:
   | { type: "photo"; photoUrl: string }
@@ -253,6 +279,8 @@ const runAIReview = async (args:
   let userMessage: ResponsesUserMessage;
 
   if (args.type === "photo") {
+    console.log("Waiting for image to be ready at URL:", args.photoUrl);
+    await waitForImageReady(args.photoUrl)
     userMessage = {
       role: "user",
       content: [
