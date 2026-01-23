@@ -5,6 +5,7 @@ import dbConnect from "@/lib/mongoose";
 type UpdatePayload = {
   transcript?: ITranscriptMessage[];
   otherProfileAnalyses?: string[];
+  analysisId?: string;
 }
 
 export async function PUT(
@@ -13,11 +14,11 @@ export async function PUT(
 ): Promise<NextResponse> {
   const { id } =  await params;
   const body: UpdatePayload = await request.json();
-  const { transcript, otherProfileAnalyses } = body;
+  const { transcript, otherProfileAnalyses, analysisId } = body;
 
-  if (!transcript && !otherProfileAnalyses) {
+  if (!transcript && !otherProfileAnalyses && !analysisId) {
     return NextResponse.json(
-      { error: "Must provide transcript or otherProfileAnalyses" },
+      { error: "Must provide transcript, otherProfileAnalyses, or analysisId" },
       { status: 400 }
     )
   }
@@ -33,6 +34,10 @@ export async function PUT(
 
   if (otherProfileAnalyses) {
     $set.otherProfileContext = otherProfileAnalyses;
+  }
+
+  if (analysisId) {
+    $set.analysisId = analysisId;
   }
 
   const conversationSnapshot = await ConversationSnapshot.findByIdAndUpdate(

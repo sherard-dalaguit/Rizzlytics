@@ -59,3 +59,24 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   return NextResponse.json({ conversationSnapshot });
 }
+
+export async function GET(_: Request): Promise<NextResponse> {
+  await dbConnect();
+
+  const conversationSnapshots = await ConversationSnapshot
+    .find()
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "threadScreenshotAssetIds",
+      select: "blobUrl createdAt",
+      options: { sort: { createdAt: 1 } },
+    })
+    .populate({
+      path: "otherProfileAssetIds",
+      select: "blobUrl createdAt",
+      options: { sort: { createdAt: 1 } },
+    })
+    .lean();
+
+  return NextResponse.json({ conversationSnapshots });
+}
