@@ -64,7 +64,7 @@ export const FileUpload = ({
           ref={fileInputRef}
           id="file-upload-handle"
           type="file"
-          multiple={type === "conversation"}
+          multiple={type != "photo"}
           accept="image/jpeg, image/png, image/webp"
           onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
           className="hidden"

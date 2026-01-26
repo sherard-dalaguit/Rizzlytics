@@ -2,6 +2,7 @@ import React from 'react'
 import {IconPhoto, IconMessage} from "@tabler/icons-react";
 import PhotoAnalysis from "@/components/analysis/PhotoAnalysis";
 import ConversationAnalysis from "@/components/analysis/ConversationAnalysis";
+import ProfileAnalysis from "@/components/analysis/ProfileAnalysis";
 
 const AIReview = () => {
   return (
@@ -41,6 +42,21 @@ const AIReview = () => {
           </div>
 
           <ConversationAnalysis />
+        </div>
+
+        <div className="flex flex-col justify-between w-full h-100 p-12 border-2 border-zinc-400 rounded-xl">
+          <div>
+            <div className="flex flex-row gap-2 mb-4">
+              <IconMessage className="h-8 w-8" />
+              <h2 className="text-2xl font-semibold">Profiles</h2>
+            </div>
+
+            <p className="text-lg text-zinc-400">
+              Optimize profile content & presentation
+            </p>
+          </div>
+
+          <ProfileAnalysis />
         </div>
 
       </div>

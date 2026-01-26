@@ -3,11 +3,12 @@ import { model, models, Schema, Types, Document } from "mongoose";
 export interface IAnalysis {
   userId: Types.ObjectId;
 
-  type: "photo" | "conversation";
+  type: "photo" | "conversation" | "profile";
   status: "queued" | "succeeded" | "failed";
 
   conversationId?: Types.ObjectId;
   selfPhotoAssetId?: Types.ObjectId;
+  profileId?: Types.ObjectId;
 
   result: {
     summary: string;
@@ -25,8 +26,8 @@ export interface IAnalysis {
     };
     suggestedReplies?: {
       text: string;
-      tone: string;
-      intent: string;
+      tone: "playful" | "direct" | "curious" | "grounded";
+      intent: "re-engage" | "escalate" | "clarify" | "disengage";
     }[]
   }
 
@@ -41,11 +42,12 @@ const AnalysisSchema = new Schema<IAnalysis>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
-    type: { type: String, enum: ["photo", "conversation"], required: true },
+    type: { type: String, enum: ["photo", "conversation", "profile"], required: true },
     status: { type: String, enum: ["queued", "succeeded", "failed"], required: true },
 
     conversationId: { type: Schema.Types.ObjectId, ref: "ConversationSnapshot" },
     selfPhotoAssetId: { type: Schema.Types.ObjectId, ref: "MediaAsset" },
+    profileId: { type: Schema.Types.ObjectId, ref: "Profile" },
 
     result: {
       summary: { type: String, required: true },
@@ -66,8 +68,8 @@ const AnalysisSchema = new Schema<IAnalysis>(
       },
       suggestedReplies: [{
         text: { type: String, required: true },
-        tone: { type: String, required: true },
-        intent: { type: String, required: true },
+        tone: { type: String, enum: ["playful", "direct", "curious", "grounded"], required: true },
+        intent: { type: String, enum: ["re-engage", "escalate", "clarify", "disengage"], required: true },
       }]
     },
 

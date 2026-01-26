@@ -1,4 +1,4 @@
-import {IconBrain, IconHome, IconMessage, IconPhoto} from "@tabler/icons-react"
+import {IconBrain, IconHome, IconMessage, IconPhoto, IconUser} from "@tabler/icons-react"
 
 export const navbarLinks = [
   {
@@ -10,6 +10,11 @@ export const navbarLinks = [
     icon: <IconPhoto className="w-6 h-6" />,
     label: "Photos",
     route: "/photos"
+  },
+  {
+    icon: <IconUser className="w-6 h-6" />,
+    label: "Profiles",
+    route: "/profiles"
   },
   {
     icon: <IconMessage className="w-6 h-6" />,

@@ -34,7 +34,17 @@ const AnalysisForm = ({ type }: { type: string }) => {
   const [threadBlobs, setThreadBlobs] = useState<PutBlobResult[]>([]);
   const [otherBlobs, setOtherBlobs] = useState<PutBlobResult[]>([]);
 
+  const [profileFiles, setProfileFiles] = useState<File[]>([]);
+  const [profileBlobs, setProfileBlobs] = useState<PutBlobResult[]>([]);
+
+  const isPhoto = type === "photo";
   const isConversation = type === "conversation";
+  const isProfile = type === "profile";
+
+  const maxStep = isConversation ? 2 : isProfile ? 1 : 0;
+
+  const goNext = () => setStep((s) => Math.min(maxStep, s + 1));
+  const goBack = () => setStep((s) => Math.max(0, s - 1));
 
   const handleFileUpload = (files: File[]) => {
     setFiles(files);
@@ -244,12 +254,79 @@ const AnalysisForm = ({ type }: { type: string }) => {
     router.push(`/ai-review/${conversationAnalysis._id}`);
   }
 
+  const handleSubmitProfilePhotos = async () => {
+    if (!profileFiles.length) throw new Error("No files selected");
+
+    const uploads = await Promise.all(
+      profileFiles.map((file) => uploadOne(file, "my_profile_photo"))
+    );
+
+    const blobs = uploads.map(u => u.blob);
+    setProfileBlobs(blobs);
+  };
+
+  const handleRunProfile = async () => {
+    if (!profileBlobs.length) throw new Error("No profile photos uploaded");
+
+    const response = await fetch('/api/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profilePhotos: profileBlobs,
+        context: contextInput,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to create profile analysis: ${response.status} ${response.statusText}`);
+    }
+
+    const { profile } = await response.json();
+
+    if (!profile) {
+      throw new Error('Failed to create profile analysis');
+    }
+
+    const analyzeResponse = await fetch(`/api/ai-analysis/profile/${profile._id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'profile',
+        contextInput,
+      }),
+    })
+
+    if (!analyzeResponse.ok) {
+      throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+    }
+
+    const { analysis: profileAnalysis } = await analyzeResponse.json()
+
+    const addAnalysisResponse = await fetch(`/api/profiles/${profile._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysisId: profileAnalysis._id }),
+    })
+
+    if (!addAnalysisResponse) {
+      throw new Error('Failed to link analysis to profile');
+    }
+
+    router.push(`/ai-review/${profileAnalysis._id}`);
+  };
+
+
   return (
     <Dialog>
       <form>
         <DialogTrigger asChild>
-          <Button className="primary-gradient text-white">
-            {isConversation ? 'Analyze Conversations' : 'Analyze Photos'}
+          <Button className="primary-gradient text-white" onClick={() => setStep(0)}>
+            {isConversation
+              ? 'Analyze Conversations'
+              : isPhoto
+                ? 'Analyze Photos'
+                : 'Analyze Profile'
+            }
           </Button>
         </DialogTrigger>
 
@@ -260,12 +337,17 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
           <DialogHeader>
             <DialogTitle>
-              {!isConversation ? 'Upload Your Photo' : 'Upload Your Message Thread Screenshots'}
+              {isConversation
+                ? 'Upload Your Conversation Thread Screenshots'
+                : isPhoto
+                  ? 'Upload Your Photo'
+                  : 'Upload Your Profile'
+              }
             </DialogTitle>
           </DialogHeader>
 
           <div className="overflow-y-auto max-h-[50vh] lg:max-h-[65vh]">
-            {!isConversation && (
+            {isPhoto && (
               <div className="flex flex-col items-center gap-4">
                 <FileUpload onChange={handleFileUpload} type="photo" />
                 <input ref={inputFileRef} type="file" className="hidden" />
@@ -384,30 +466,94 @@ const AnalysisForm = ({ type }: { type: string }) => {
                 )}
               </>
             )}
+
+            {isProfile && (
+              <>
+                <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className={step === 0 ? "font-semibold text-foreground" : ""}>1) Photos</span>
+                  <span>•</span>
+                  <span className={step === 1 ? "font-semibold text-foreground" : ""}>2) Context (optional)</span>
+                </div>
+
+                {/* STEP 0: profile photos */}
+                {step === 0 && (
+                  <div className="flex flex-col items-center gap-4">
+                    <FileUpload onChange={(f) => setProfileFiles(f)} type="profile" />
+
+                    <Button
+                      type="button"
+                      className="primary-gradient text-white px-12 py-6"
+                      onClick={handleSubmitProfilePhotos}
+                    >
+                      Upload Profile Photos
+                    </Button>
+
+                    {profileBlobs.length > 0 && (
+                      <section className="mt-2 grid grid-cols-4 gap-4">
+                        {profileBlobs.map((blob) => (
+                          <Image
+                            key={blob.pathname}
+                            src={blob.url}
+                            alt="uploaded profile photo"
+                            width={150}
+                            height={150}
+                            className="rounded-xl"
+                          />
+                        ))}
+                      </section>
+                    )}
+                  </div>
+                )}
+
+                {/* STEP 1: optional context */}
+                {step === 1 && (
+                  <div className="flex flex-col gap-3">
+                    <label className="text-sm font-medium">Context (optional)</label>
+                    <textarea
+                      value={contextInput}
+                      onChange={(e) => setContextInput(e.target.value)}
+                      placeholder="e.g. What vibe are you going for? (clean boy, artsy, gym, traveler). What kind of girls are you targeting? Any constraints?"
+                      className="min-h-40 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+
+                    <Button
+                      type="button"
+                      className="primary-gradient text-white px-12 py-6 self-center"
+                      disabled={profileBlobs.length === 0}
+                      onClick={handleRunProfile}
+                    >
+                      Run Profile Analysis
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {isConversation && (
+          {(isConversation || isProfile) && (
             <DialogFooter className="mt-auto w-full flex items-end justify-between">
               <button
-                onClick={() => setStep((s) => Math.max(0, s - 1))}
+                type="button"
+                onClick={goBack}
                 disabled={step === 0}
                 className="relative inline-flex h-12 w-32 overflow-hidden rounded-lg p-px focus:outline-none disabled:opacity-50"
               >
                 <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)] pointer-events-none z-0"/>
                 <span className="relative z-10 inline-flex h-full w-full items-center justify-center rounded-lg bg-slate-950 px-7 py-1 text-md font-medium text-white gap-2">
-							Back
-						</span>
+                  Back
+                </span>
               </button>
 
               <button
-                onClick={() => setStep((s) => Math.min(2, s + 1))}
-                disabled={step === 2}
+                type="button"
+                onClick={goNext}
+                disabled={step === maxStep}
                 className="relative inline-flex h-12 w-32 overflow-hidden rounded-lg p-px focus:outline-none disabled:opacity-50"
               >
                 <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)] pointer-events-none z-0"/>
                 <span className="relative z-10 inline-flex h-full w-full items-center justify-center rounded-lg bg-slate-950 px-7 py-1 text-md font-medium text-white gap-2">
-							Next
-						</span>
+                  Next
+                </span>
               </button>
             </DialogFooter>
           )}

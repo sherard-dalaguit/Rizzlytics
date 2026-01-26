@@ -3,7 +3,7 @@ import { model, models, Schema, Types, Document } from "mongoose";
 export interface IMediaAsset {
   userId: Types.ObjectId;
   assetType: "image";
-  category: "self_photo" | "other_profile_photo" | "chat_screenshot"
+  category: "self_photo" | "other_profile_photo" | "my_profile_photo" | "chat_screenshot"
 
   analysisId?: Types.ObjectId;
 
@@ -22,7 +22,7 @@ const MediaAssetSchema = new Schema<IMediaAsset>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     assetType: { type: String, enum: ["image"], required: true },
-    category: { type: String, enum: ["self_photo", "other_profile_photo", "chat_screenshot"], required: true },
+    category: { type: String, enum: ["self_photo", "other_profile_photo", "my_profile_photo", "chat_screenshot"], required: true },
 
     analysisId: { type: Schema.Types.ObjectId, ref: "Analysis" },
 

@@ -119,29 +119,38 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   // 2) Normalize “source” shape
   const isConversation = analysis.type === "conversation";
+  const isPhoto = analysis.type === "photo";
+  const isProfile = analysis.type === "profile";
+
   const conversation = isConversation ? analysis.conversationId : null; // populated doc (or null)
-  const photoAssetId = !isConversation ? analysis.selfPhotoAssetId : null;
+  const photoAssetId = isPhoto ? analysis.selfPhotoAssetId : null;
+  const profile = isProfile ? analysis.profileId : null;
 
   // 3) Extract ids (no fetching yet)
   const threadIds: string[] = conversation?.threadScreenshotAssetIds ?? [];
   const otherProfileIds: string[] = conversation?.otherProfileAssetIds ?? [];
   const contextText: string | null = conversation?.contextInput ?? null;
+  const profilePhotoIds: string[] = profile?.myProfileAssetIds ?? [];
+  const profileContextText: string | null = profile?.contextInput ?? null;
 
   // 4) Fetch assets (single block)
   const [
     photoAsset,
     threadAssets,
     otherProfileAssets,
+    profileAssets,
   ] = await Promise.all([
     photoAssetId ? fetchMediaAsset(photoAssetId.toString()) : Promise.resolve(null),
     threadIds.length ? fetchMediaAssets(threadIds) : Promise.resolve([]),
     otherProfileIds.length ? fetchMediaAssets(otherProfileIds) : Promise.resolve([]),
+    profilePhotoIds.length ? fetchMediaAssets(profilePhotoIds) : Promise.resolve([]),
   ]);
 
   // 5) Map to urls (UI-ready)
   const photoUrl = photoAsset?.blobUrl ?? null;
   const threadUrls = threadAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
   const otherProfileUrls = otherProfileAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
+  const profileUrls = profileAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
 
   // 6) UI helpers
   const { headline, bullets } = pickHeadlineAndBullets(result.summary);
@@ -496,6 +505,34 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 {/* Other profile screenshots (optional) */}
                 {otherProfileUrls.length > 0 && (
                   <ImageGrid title="Other profile screenshots" urls={otherProfileUrls} />
+                )}
+              </div>
+            )}
+
+            {/* PROFILE MODE */}
+            {analysis.type === "profile" && (
+              <div className="space-y-4">
+                {/* Optional context input */}
+                {profileContextText && profileContextText.trim().length > 0 && (
+                  <div className="rounded-2xl border bg-muted/20 p-5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Extra context</h3>
+                      <Badge variant="outline">Optional</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {profileContextText}
+                    </p>
+                  </div>
+                )}
+
+                {profileUrls.length === 0 ? (
+                  <div className="rounded-2xl border bg-muted/20 p-5">
+                    <p className="text-sm text-muted-foreground">
+                      Profile photos not available (missing asset URLs).
+                    </p>
+                  </div>
+                ) : (
+                  <ImageGrid title="Profile photos" urls={profileUrls.slice(0, 9)} />
                 )}
               </div>
             )}
