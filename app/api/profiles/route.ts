@@ -44,3 +44,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   return NextResponse.json({ profile });
 }
+
+export async function GET(_request: Request): Promise<NextResponse> {
+  await dbConnect()
+
+  const profiles = await Profile.find().populate("myProfileAssetIds");
+
+  return NextResponse.json({ profiles });
+}

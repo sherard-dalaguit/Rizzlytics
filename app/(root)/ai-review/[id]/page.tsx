@@ -152,9 +152,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const otherProfileUrls = otherProfileAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
   const profileUrls = profileAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
 
-  console.log("PROFILE URLS:", profileUrls);
-  console.log("PROFILE CONTEXT:", profileContextText);
-
   // 6) UI helpers
   const { headline, bullets } = pickHeadlineAndBullets(result.summary);
   const hasSuggestedReplies = (result.suggestedReplies?.length ?? 0) > 0;

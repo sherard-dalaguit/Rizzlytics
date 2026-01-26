@@ -10,7 +10,7 @@ import {
   IconMessageCircle2,
   IconPhoto,
   IconSparkles,
-  IconTrendingUp,
+  IconTrendingUp, IconUser,
 } from "@tabler/icons-react";
 
 type MediaAssetLike = {
@@ -29,23 +29,42 @@ type ConversationSnapshotLike = {
   analysisId?: any;
 };
 
+type ProfileLike = {
+  _id: any;
+  createdAt?: string | Date;
+  myProfileAssetIds?: any[]; // populated docs or ids
+  contextInput?: string;
+  analysisId?: any;
+};
+
 function safeTime(value: any): number {
   if (!value) return 0;
   const t = new Date(value).getTime();
   return Number.isFinite(t) ? t : 0;
 }
 
+function resolveFirstProfileThumb(profile: ProfileLike | null): string | null {
+  if (!profile) return null;
+  const first = Array.isArray(profile.myProfileAssetIds) ? profile.myProfileAssetIds[0] : null;
+  if (!first) return null;
+  if (typeof first === "object" && (first as any).blobUrl) return (first as any).blobUrl;
+  return null;
+}
+
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<MediaAssetLike[]>([]);
   const [convos, setConvos] = useState<ConversationSnapshotLike[]>([]);
+  const [profiles, setProfiles] = useState<ProfileLike[]>([]);
 
   useEffect(() => {
     const run = async () => {
       try {
-        const [photosRes, convosRes] = await Promise.all([
+        const [photosRes, convosRes, profilesRes] = await Promise.all([
           fetch("/api/assets", { method: "GET" }),
           fetch("/api/conversations", { method: "GET" }),
+          fetch("/api/profiles", { method: "GET" }),
         ]);
 
         if (photosRes.ok) {
@@ -60,6 +79,13 @@ export default function DashboardPage() {
           setConvos(data.conversationSnapshots ?? []);
         } else {
           console.error("Failed to fetch /api/conversation-snapshots");
+        }
+
+        if (profilesRes.ok) {
+          const data = await profilesRes.json();
+          setProfiles(data.profiles ?? []);
+        } else {
+          console.error("Failed to fetch /api/profiles");
         }
       } catch (err) {
         console.error(err);
@@ -79,21 +105,32 @@ export default function DashboardPage() {
     return [...convos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
   }, [convos]);
 
+  const sortedProfiles = useMemo(() => {
+    return [...profiles].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
+  }, [profiles]);
+
   const latestPhoto = sortedPhotos[0] ?? null;
   const latestConvo = sortedConvos[0] ?? null;
+  const latestProfile = sortedProfiles[0] ?? null;
 
   const photoCount = sortedPhotos.length;
   const convoCount = sortedConvos.length;
+  const profileCount = sortedProfiles.length;
 
   const convWithContext = useMemo(() => {
     return sortedConvos.filter((c) => Boolean(c.contextInput?.trim())).length;
   }, [sortedConvos]);
 
+  const profilesWithContext = useMemo(() => {
+    return sortedProfiles.filter((p) => Boolean(p.contextInput?.trim())).length;
+  }, [sortedProfiles]);
+
   const lastUploadAt = useMemo(() => {
     const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
     const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
+    const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
     return Math.max(photoT, convoT);
-  }, [latestPhoto, latestConvo]);
+  }, [latestPhoto, latestConvo, latestProfile]);
 
   const lastUploadLabel = useMemo(() => {
     if (!lastUploadAt) return "—";
@@ -167,6 +204,17 @@ export default function DashboardPage() {
       return steps;
     }
 
+    if (photoCount > 0 && profileCount === 0) {
+      steps.push({
+        title: "Create a profile set",
+        description: "Bundle your best photos into one profile analysis (this is what you’ll actually use).",
+        cta: "Go to Profiles",
+        href: "/profiles",
+        icon: <IconPhoto className="h-5 w-5" />,
+      });
+      return steps;
+    }
+
     // Both exist
     steps.push({
       title: "Improve one thing today",
@@ -217,11 +265,11 @@ export default function DashboardPage() {
   }
 
   const snapshotLabel =
-    photoCount === 0 && convoCount === 0
+    photoCount === 0 && convoCount === 0 && profileCount === 0
       ? "No uploads yet"
-      : `Snapshot • ${photoCount} photo${photoCount === 1 ? "" : "s"} • ${convoCount} conversation${
-        convoCount === 1 ? "" : "s"
-      }`;
+      : `Snapshot • ${photoCount} photo${photoCount === 1 ? "" : "s"} • ${profileCount} profile${
+        profileCount === 1 ? "" : "s"
+      } • ${convoCount} conversation${convoCount === 1 ? "" : "s"}`;
 
   return (
     <main className="max-w-352 mx-auto px-6 py-10 space-y-10">
@@ -367,12 +415,49 @@ export default function DashboardPage() {
                   : undefined
               }
             />
+
+            <RecentCard
+              kind="Latest profile"
+              thumbnailUrl={resolveFirstProfileThumb(latestProfile)}
+              title={
+                latestProfile
+                  ? `Profile • ${shortId(latestProfile._id?.toString?.() ?? String(latestProfile._id))}`
+                  : "No profiles yet"
+              }
+              subtitle={
+                latestProfile?.createdAt
+                  ? `Uploaded ${formatDate(latestProfile.createdAt)}`
+                  : "Create a profile set to get started."
+              }
+              chips={
+                latestProfile
+                  ? [
+                    `Photos: ${countAssetIds(latestProfile.myProfileAssetIds)}`,
+                    latestProfile.contextInput?.trim() ? "Has context" : "No context",
+                  ]
+                  : []
+              }
+              primaryCta={{
+                label: "View",
+                onClick: () => (window.location.href = "/profiles"),
+              }}
+              secondaryCta={
+                latestProfile?.analysisId
+                  ? {
+                    label: "AI Review",
+                    onClick: () => (window.location.href = `/ai-review/${latestProfile.analysisId}`),
+                    variant: "primary",
+                    icon: <IconBrain className="h-4 w-4" />,
+                  }
+                  : undefined
+              }
+            />
           </div>
         </div>
       </section>
 
       {/* Stats row (meaningful, not “analyzed 8/8”) */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <StatTile label="Photos uploaded" value={`${photoCount}`} icon={<IconPhoto className="h-5 w-5" />} />
         <StatTile
           label="Conversations uploaded"
@@ -389,6 +474,11 @@ export default function DashboardPage() {
           value={lastUploadLabel}
           icon={<IconTrendingUp className="h-5 w-5" />}
           valueClassName="text-sm font-semibold text-white"
+        />
+        <StatTile
+          label="Profiles created"
+          value={`${profileCount}`}
+          icon={<IconUser className="h-5 w-5" />}
         />
       </section>
 
