@@ -286,6 +286,19 @@ const AnalysisForm = ({ type }: { type: string }) => {
     if (!profile) {
       throw new Error('Failed to create profile analysis');
     }
+
+    const analyzeResponse = await fetch(`/api/ai-analysis/profile/${profile._id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'profile',
+        contextInput,
+      }),
+    })
+
+    if (!analyzeResponse.ok) {
+      throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+    }
   };
 
 
