@@ -299,6 +299,20 @@ const AnalysisForm = ({ type }: { type: string }) => {
     if (!analyzeResponse.ok) {
       throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
     }
+
+    const { analysis: profileAnalysis } = await analyzeResponse.json()
+
+    const addAnalysisResponse = await fetch(`/api/profiles/${profile._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysisId: profileAnalysis._id }),
+    })
+
+    if (!addAnalysisResponse) {
+      throw new Error('Failed to link analysis to profile');
+    }
+
+    router.push(`/ai-review/${profileAnalysis._id}`);
   };
 
 

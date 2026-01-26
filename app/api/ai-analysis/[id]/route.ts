@@ -12,7 +12,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     .populate({
       path: "conversationId",
       select: "threadScreenshotAssetIds otherProfileAssetIds contextInput"
-    });
+    })
+    .populate({
+      path: "profileId",
+      select: "myProfileAssetIds contextInput"
+    })
   if (!analysis) {
     return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }
