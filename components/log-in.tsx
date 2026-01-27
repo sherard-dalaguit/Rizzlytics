@@ -32,7 +32,7 @@ export default function LogIn() {
             {/* hover gradient sheen */}
             <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               <span className="absolute inset-0 rounded-xl primary-gradient opacity-[0.35]" />
-              <span className="absolute inset-0 mask-[linear-gradient(to_bottom,black,transparent)] primary-gradient opacity-[0.35]" />
+              <span className="absolute inset-0 rounded-xl mask-[linear-gradient(to_bottom,black,transparent)] primary-gradient opacity-[0.35]" />
             </span>
 
             <IconBrandGithub className="relative h-5 w-5 opacity-90" />
@@ -53,7 +53,7 @@ export default function LogIn() {
           >
             <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               <span className="absolute inset-0 rounded-xl primary-gradient opacity-[0.35]" />
-              <span className="absolute inset-0 mask-[linear-gradient(to_bottom,black,transparent)] primary-gradient opacity-[0.35]" />
+              <span className="absolute inset-0 rounded-xl mask-[linear-gradient(to_bottom,black,transparent)] primary-gradient opacity-[0.35]" />
             </span>
 
             <IconBrandGoogleFilled className="relative h-5 w-5 opacity-90" />
