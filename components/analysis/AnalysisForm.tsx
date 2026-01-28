@@ -1,6 +1,6 @@
 'use client';
 
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {FileUpload} from "@/components/ui/file-upload";
 import Image from "next/image";
@@ -13,6 +13,7 @@ import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreensh
 import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot";
 import {useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
+import ReorderableFileGrid from "@/components/ReorderableFileGrid";
 
 type UploadResponse = {
   blob: PutBlobResult;
@@ -353,7 +354,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
           )}
         >
           {/* Header */}
-          <div className="relative border-b border-white/10 bg-white/[0.03] px-6 py-5">
+          <div className="relative border-b border-white/10 bg-white/3 px-6 py-5">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_240px_at_20%_0%,rgba(255,70,197,0.12),transparent_60%),radial-gradient(700px_240px_at_80%_0%,rgba(209,179,255,0.10),transparent_60%)]" />
             <div className="relative">
               <DialogHeader className="space-y-1">
@@ -380,7 +381,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
           <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-12">
             {/* Left rail (only for conversation/profile) */}
             {(isConversation || isProfile) ? (
-              <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-white/10 bg-white/[0.02] p-6">
+              <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-white/10 bg-white/2 p-6">
                 {/* Stepper */}
                 <div className="mb-6">
                   <p className="text-xs uppercase tracking-wide text-zinc-500">Steps</p>
@@ -396,14 +397,14 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           key={s.idx}
                           className={cn(
                             "flex items-center justify-between rounded-xl border px-3 py-3",
-                            step === s.idx ? "border-white/15 bg-white/[0.05]" : "border-white/10 bg-white/[0.02]"
+                            step === s.idx ? "border-white/15 bg-white/5" : "border-white/10 bg-white/2"
                           )}
                         >
                           <div className="flex items-center gap-3">
                           <span
                             className={cn(
                               "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
-                              step === s.idx ? "bg-white/10 text-white" : "bg-white/[0.06] text-zinc-300"
+                              step === s.idx ? "bg-white/10 text-white" : "bg-white/6 text-zinc-300"
                             )}
                           >
                             {s.idx + 1}
@@ -429,14 +430,14 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           key={s.idx}
                           className={cn(
                             "flex items-center justify-between rounded-xl border px-3 py-3",
-                            step === s.idx ? "border-white/15 bg-white/[0.05]" : "border-white/10 bg-white/[0.02]"
+                            step === s.idx ? "border-white/15 bg-white/5" : "border-white/10 bg-white/2"
                           )}
                         >
                           <div className="flex items-center gap-3">
                           <span
                             className={cn(
                               "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
-                              step === s.idx ? "bg-white/10 text-white" : "bg-white/[0.06] text-zinc-300"
+                              step === s.idx ? "bg-white/10 text-white" : "bg-white/6 text-zinc-300"
                             )}
                           >
                             {s.idx + 1}
@@ -454,7 +455,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                 </div>
 
                 {/* Tips */}
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/10 bg-white/3 p-4">
                   <p className="text-sm font-semibold text-white">Tips</p>
                   <ul className="mt-2 space-y-2 text-sm text-zinc-400">
                     {isProfile && (
@@ -478,7 +479,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
             {/* Main panel */}
             <div className={cn((isConversation || isProfile) ? "lg:col-span-8" : "lg:col-span-12", "p-6")}>
-              <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex flex-col min-h-0">
+              <div className="h-full rounded-2xl border border-white/10 bg-white/3 p-5 flex flex-col min-h-0">
                 <div className="flex-1 overflow-y-auto pr-1">
                   {/* ===================== */}
                   {/* PHOTO */}
@@ -487,7 +488,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                       {/* Dropzone */}
                       <div className="lg:col-span-5">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/3 p-5">
                           <p className="text-sm font-semibold text-white">Select a photo</p>
                           <p className="mt-1 text-sm text-zinc-400">
                             Drag & drop or click to upload. Best results with clear, natural lighting.
@@ -519,7 +520,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                           <p className="text-sm font-semibold text-white">Preview</p>
 
-                          <div className="mt-3 relative aspect-[4/5] w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center">
+                          <div className="mt-3 relative aspect-4/5 w-full overflow-hidden rounded-xl border border-white/10 bg-white/2 flex items-center justify-center">
                             {blob ? (
                               <Image
                                 key={blob.pathname}
@@ -545,7 +546,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                   {isConversation && (
                     <>
                       {step === 0 && (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
                           <p className="text-sm font-semibold text-white">Thread screenshots</p>
                           <p className="mt-1 text-sm text-zinc-400">
                             Upload the main message thread screenshots (in order).
@@ -569,29 +570,20 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           </span>
                           </div>
 
-                          {threadBlobs.length > 0 && (
-                            <section className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {threadBlobs.map((b) => (
-                                <div
-                                  key={b.pathname}
-                                  className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]"
-                                >
-                                  <Image
-                                    src={b.url}
-                                    alt="uploaded thread screenshot"
-                                    width={220}
-                                    height={220}
-                                    className="w-full object-contain"
-                                  />
-                                </div>
-                              ))}
-                            </section>
+                          {threadFiles.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-xs tracking-wide text-zinc-500 mb-2">
+                                Reorder before upload | Images won&apos;t load until re-ordered
+                              </p>
+
+                              <ReorderableFileGrid files={threadFiles} setFiles={setThreadFiles} />
+                            </div>
                           )}
                         </div>
                       )}
 
                       {step === 1 && (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
                           <p className="text-sm font-semibold text-white">Other profile (optional)</p>
                           <p className="mt-1 text-sm text-zinc-400">
                             Upload screenshots of their profile to improve context.
@@ -615,29 +607,20 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           </span>
                           </div>
 
-                          {otherBlobs.length > 0 && (
-                            <section className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {otherBlobs.map((b) => (
-                                <div
-                                  key={b.pathname}
-                                  className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]"
-                                >
-                                  <Image
-                                    src={b.url}
-                                    alt="uploaded other profile screenshot"
-                                    width={220}
-                                    height={220}
-                                    className="w-full object-contain"
-                                  />
-                                </div>
-                              ))}
-                            </section>
+                          {otherFiles.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-xs tracking-wide text-zinc-500 mb-2">
+                                Reorder before upload | Images won&apos;t load until re-ordered
+                              </p>
+
+                              <ReorderableFileGrid files={otherFiles} setFiles={setOtherFiles} />
+                            </div>
                           )}
                         </div>
                       )}
 
                       {step === 2 && (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
                           <p className="text-sm font-semibold text-white">Context (optional)</p>
                           <p className="mt-1 text-sm text-zinc-400">
                             Add your goal so the AI gives the right next move.
@@ -671,7 +654,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                   {isProfile && (
                     <>
                       {step === 0 && (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
                           <p className="text-sm font-semibold text-white">Profile photo set</p>
                           <p className="mt-1 text-sm text-zinc-400">
                             Upload the photos you want analyzed as a set.
@@ -695,29 +678,20 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           </span>
                           </div>
 
-                          {profileBlobs.length > 0 && (
-                            <section className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {profileBlobs.map((b) => (
-                                <div
-                                  key={b.pathname}
-                                  className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]"
-                                >
-                                  <Image
-                                    src={b.url}
-                                    alt="uploaded profile photo"
-                                    width={220}
-                                    height={220}
-                                    className="w-full object-contain"
-                                  />
-                                </div>
-                              ))}
-                            </section>
+                          {profileFiles.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-xs tracking-wide text-zinc-500 mb-2">
+                                Order matters (1 = first photo) | Images won&apos;t load until re-ordered
+                              </p>
+
+                              <ReorderableFileGrid files={profileFiles} setFiles={setProfileFiles} />
+                            </div>
                           )}
                         </div>
                       )}
 
                       {step === 1 && (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
                           <p className="text-sm font-semibold text-white">Context (optional)</p>
                           <p className="mt-1 text-sm text-zinc-400">
                             What vibe are you going for, and who are you trying to attract?
@@ -753,7 +727,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                       type="button"
                       onClick={goBack}
                       disabled={step === 0}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-2.5 text-sm text-white hover:bg-white/[0.05] disabled:opacity-40"
+                      className="rounded-xl border border-white/10 bg-white/3 px-5 py-2.5 text-sm text-white hover:bg-white/5 disabled:opacity-40"
                     >
                       Back
                     </button>
@@ -762,7 +736,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                       type="button"
                       onClick={goNext}
                       disabled={step === maxStep}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-2.5 text-sm text-white hover:bg-white/[0.05] disabled:opacity-40"
+                      className="rounded-xl border border-white/10 bg-white/3 px-5 py-2.5 text-sm text-white hover:bg-white/5 disabled:opacity-40"
                     >
                       Next
                     </button>
