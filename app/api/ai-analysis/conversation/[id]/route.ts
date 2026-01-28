@@ -6,7 +6,7 @@ import Analysis, {IAnalysisDoc} from "@/database/analysis.model";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
-  const { type, transcript, contextInput, otherProfileContext } = body;
+  const { userId, type, transcript, contextInput, otherProfileContext } = body;
 
   if (!type) {
     return NextResponse.json(
@@ -39,8 +39,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const analysisResult = await runAIReview({type, transcript, contextInput, otherProfileContext});
 
   await dbConnect();
-
-  const userId = /* get this from auth session later */ undefined as any;
 
   const analysis: IAnalysisDoc = await Analysis.create({
     userId,

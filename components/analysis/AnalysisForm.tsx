@@ -12,6 +12,7 @@ import {ITranscriptMessage} from "@/database/conversation-snapshot.model";
 import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreenshot";
 import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot";
 import {useRouter} from "next/navigation";
+import {useSession} from "next-auth/react";
 
 type UploadResponse = {
   blob: PutBlobResult;
@@ -20,6 +21,12 @@ type UploadResponse = {
 
 const AnalysisForm = ({ type }: { type: string }) => {
   const router = useRouter();
+
+  const session = useSession();
+  const user = session.data?.user;
+  if (!user) {
+    router.push('/log-in')
+  }
 
   const [step, setStep] = useState(0);
 
@@ -66,10 +73,19 @@ const AnalysisForm = ({ type }: { type: string }) => {
   }
 
   const uploadOne = async(file: File, category: string) => {
-    const response = await fetch(
-      `/api/assets?filename=${file.name}&category=${category}`,
-      { method: 'POST', body: file }
-    );
+    const userId = user!.id;
+    if (!userId) throw new Error("User not authenticated");
+
+    const formData = new FormData();
+
+    formData.append('file', file);
+    formData.append('category', category);
+    formData.append('userId', userId);
+
+    const response = await fetch(`/api/assets`, {
+      method: 'POST',
+      body: formData
+    });
 
     if (!response.ok) throw new Error(`Failed to upload file: ${file.name}`);
 
@@ -87,6 +103,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        userId: user!.id,
         type: 'photo',
         photoUrl: blob.url,
       }),
@@ -142,6 +159,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        userId: user!.id,
         threadScreenshots: threadBlobs,
         otherProfileScreenshots: otherBlobs,
         context: contextInput,
@@ -228,6 +246,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        userId: user!.id,
         type: 'conversation',
         transcript,
         contextInput,
@@ -272,6 +291,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        userId: user!.id,
         profilePhotos: profileBlobs,
         context: contextInput,
       }),
@@ -291,6 +311,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        userId: user!.id,
         type: 'profile',
         contextInput,
       }),

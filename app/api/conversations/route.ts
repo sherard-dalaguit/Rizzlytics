@@ -3,20 +3,13 @@ import {NextResponse} from "next/server";
 import MediaAsset from "@/database/media-asset.model";
 import dbConnect from "@/lib/mongoose";
 import ConversationSnapshot from "@/database/conversation-snapshot.model";
-
-type CreateConversationPayload = {
-  threadScreenshots: PutBlobResult[];
-  otherProfileScreenshots: PutBlobResult[];
-  context?: string;
-}
+import {auth} from "@/auth";
 
 export async function POST(request: Request): Promise<NextResponse> {
   await dbConnect();
 
-  const body = (await request.json()) as CreateConversationPayload;
-  const threadScreenshots = body.threadScreenshots ?? [];
-  const otherProfileScreenshots = body.otherProfileScreenshots ?? [];
-  const context = body.context ?? "";
+  const body = await request.json()
+  const { userId, threadScreenshots, otherProfileScreenshots, context } = body;
 
   if (!Array.isArray(threadScreenshots) || threadScreenshots.length === 0) {
     return NextResponse.json({ error: "At least one thread screenshot is required" }, { status: 400 });
@@ -46,8 +39,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // now that we have the media asset ids for the screenshots,
   // we store their ids in a new ConversationSnapshot document
-  const userId = /* get this from auth session later */ undefined as any;
-
   const conversationSnapshot = await ConversationSnapshot.create({
     userId,
     threadScreenshotAssetIds,
@@ -61,10 +52,17 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function GET(_: Request): Promise<NextResponse> {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   await dbConnect();
 
   const conversationSnapshots = await ConversationSnapshot
-    .find()
+    .find({ userId: user.id })
     .sort({ createdAt: -1 })
     .populate({
       path: "threadScreenshotAssetIds",

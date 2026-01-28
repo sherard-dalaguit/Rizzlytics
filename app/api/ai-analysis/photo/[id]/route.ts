@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/mongoose";
 import {NextResponse} from "next/server";
 import runAIReview from "@/lib/server/analysis/runAIReview";
-import Analysis, {IAnalysisDoc} from "@/database/analysis.model";
+import Analysis from "@/database/analysis.model";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +18,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    const { type, photoUrl } = body ?? {};
+    const { userId, type, photoUrl } = body ?? {};
     if (!type || !photoUrl) {
       return NextResponse.json(
         { error: 'Missing required "type" or "photoUrl" in request body.' },
@@ -46,8 +46,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // 3) db write
     await dbConnect();
-
-    const userId = undefined as any; // TODO: replace with auth
 
     const analysis = await Analysis.create({
       userId,
