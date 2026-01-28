@@ -54,6 +54,23 @@ const AnalysisForm = ({ type }: { type: string }) => {
   const goNext = () => setStep((s) => Math.min(maxStep, s + 1));
   const goBack = () => setStep((s) => Math.max(0, s - 1));
 
+  const [busy, setBusy] = useState(false);
+  const [busyTitle, setBusyTitle] = useState<string>("");
+  const [busyDetail, setBusyDetail] = useState<string>("");
+  const [open, setOpen] = useState(false);
+
+  const startBusy = (title: string, detail?: string) => {
+    setBusyTitle(title);
+    setBusyDetail(detail ?? "");
+    setBusy(true);
+  };
+
+  const stopBusy = () => {
+    setBusy(false);
+    setBusyTitle("");
+    setBusyDetail("");
+  };
+
   const handleFileUpload = (files: File[]) => {
     setFiles(files);
 
@@ -94,44 +111,51 @@ const AnalysisForm = ({ type }: { type: string }) => {
   }
 
   const handleSubmitPhoto = async () => {
-    const selected = getSelectedFiles();
-    if (!selected.length) throw new Error("No file selected");
+    try {
+      startBusy("Analyzing photo", "Uploading image…");
 
-    const { blob, mediaAsset } = await uploadOne(selected[0], "self_photo");
-    setBlob(blob);
+      const selected = getSelectedFiles();
+      if (!selected.length) throw new Error("No file selected");
 
-    const analyzeResponse = await fetch(`/api/ai-analysis/photo/${mediaAsset._id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        type: 'photo',
-        photoUrl: blob.url,
-      }),
-    });
+      const { blob, mediaAsset } = await uploadOne(selected[0], "self_photo");
+      setBlob(blob);
 
-    if (!analyzeResponse.ok) {
-      throw new Error(`Failed to analyze photo: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+      setBusyDetail("Running AI analysis…");
+
+      const analyzeResponse = await fetch(`/api/ai-analysis/photo/${mediaAsset._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user!.id,
+          type: 'photo',
+          photoUrl: blob.url,
+        }),
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error(`Failed to analyze photo: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+      }
+
+      const { analysis } = await analyzeResponse.json();
+      if (!analysis) throw new Error('Failed to analyze photo');
+
+      setBusyDetail("Finalizing…");
+
+      const addAnalysisResponse = await fetch(`/api/assets/${mediaAsset._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId: analysis._id }),
+      });
+
+      if (!addAnalysisResponse.ok) throw new Error('Failed to link analysis to media asset');
+
+      router.push(`/ai-review/${analysis._id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      stopBusy();
     }
-
-    const { analysis } = await analyzeResponse.json();
-
-    if (!analysis) {
-      throw new Error('Failed to analyze photo');
-    }
-
-    const addAnalysisResponse = await fetch(`/api/assets/${mediaAsset._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisId: analysis._id }),
-    })
-
-    if (!addAnalysisResponse.ok) {
-      throw new Error('Failed to link analysis to media asset');
-    }
-
-    router.push(`/ai-review/${analysis._id}`);
-  }
+  };
 
   const handleSubmitThreadScreenshots = async() => {
     if (!threadFiles.length) throw new Error("No files selected");
@@ -156,122 +180,121 @@ const AnalysisForm = ({ type }: { type: string }) => {
   }
 
   const handleSubmitConversationSnapshot = async() => {
-    const response = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        threadScreenshots: threadBlobs,
-        otherProfileScreenshots: otherBlobs,
-        context: contextInput,
-      }),
-    });
+    try {
+      startBusy("Analyzing conversation", "Creating snapshot...");
 
-    if (!response.ok) {
-      throw new Error(`Failed to create conversation snapshot: ${response.status} ${response.statusText}`);
-    }
-    const { conversationSnapshot } = await response.json();
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user!.id,
+          threadScreenshots: threadBlobs,
+          otherProfileScreenshots: otherBlobs,
+          context: contextInput,
+        }),
+      });
+      if (!response.ok) throw new Error(`Failed to create conversation snapshot: ${response.status} ${response.statusText}`);
 
-    if (!conversationSnapshot) {
-      throw new Error('Failed to create conversation snapshot');
-    }
+      const { conversationSnapshot } = await response.json();
+      if (!conversationSnapshot) throw new Error('Failed to create conversation snapshot');
 
-    const extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
+      setBusyDetail("Extracting messages from screenshots...");
 
-    for (const threadBlob of threadBlobs) {
-      const messages = await analyzeThreadScreenshot(threadBlob);
-
-      if (!messages?.length) {
-        throw new Error(`Failed to analyze thread screenshot: ${threadBlob.pathname}`);
+      const extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
+      for (const threadBlob of threadBlobs) {
+        const messages = await analyzeThreadScreenshot(threadBlob);
+        if (!messages?.length) throw new Error(`Failed to analyze thread screenshot: ${threadBlob.pathname}`);
+        extracted.push(...messages.map(m => ({ speaker: m.speaker, text: m.text })));
       }
+      if (!extracted.length) throw new Error('Failed to extract transcript messages from screenshots');
 
-      extracted.push(...messages.map(m => ({ speaker: m.speaker, text: m.text })));
-    }
+      setBusyDetail("Saving transcript...");
 
-    if (!extracted.length) {
-      throw new Error('Failed to extract transcript messages from screenshots');
-    }
+      const transcript: ITranscriptMessage[] = extracted.map((m, idx) => ({
+        order: idx + 1,
+        speaker: m.speaker,
+        text: m.text,
+      }))
 
-    const transcript: ITranscriptMessage[] = extracted.map((m, idx) => ({
-      order: idx + 1,
-      speaker: m.speaker,
-      text: m.text,
-    }))
+      console.log(transcript);
 
-    console.log(transcript);
-
-    // once all messages are collected, edit conversationSnapshot transcript in MongoDB
-    const res = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript }),
-    });
-
-    if (!res.ok) {
-      const errorPayload = await res.json().catch(() => null);
-      throw new Error(
-        errorPayload?.error ??
-        `Failed to update conversation snapshot with transcript (status ${res.status})`
-      );
-    }
-
-    let otherAnalyses: string = '';
-
-    if (otherBlobs?.length) {
-      for (const otherBlob of otherBlobs) {
-        const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
-
-        if (!otherAnalysis) {
-          throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
-        }
-
-        otherAnalyses += " " + otherAnalysis.trim();
-      }
-
-      const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+      // once all messages are collected, edit conversationSnapshot transcript in MongoDB
+      const res = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({otherProfileAnalyses: otherAnalyses}),
-      })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript }),
+      });
 
-      if (!finalRes.ok) {
-        const errorPayload = await finalRes.json().catch(() => null);
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => null);
         throw new Error(
           errorPayload?.error ??
-          `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
+          `Failed to update conversation snapshot with transcript (status ${res.status})`
         );
       }
+
+      setBusyDetail("Reading other profile (optional)...");
+
+      let otherAnalyses: string = '';
+
+      if (otherBlobs?.length) {
+        for (const otherBlob of otherBlobs) {
+          const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
+
+          if (!otherAnalysis) {
+            throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
+          }
+
+          otherAnalyses += " " + otherAnalysis.trim();
+        }
+
+        const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({otherProfileAnalyses: otherAnalyses}),
+        })
+
+        if (!finalRes.ok) {
+          const errorPayload = await finalRes.json().catch(() => null);
+          throw new Error(
+            errorPayload?.error ??
+            `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
+          );
+        }
+      }
+
+      setBusyDetail("Running AI analysis...");
+
+      const analyzeResponse = await fetch(`/api/ai-analysis/conversation/${conversationSnapshot._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user!.id,
+          type: 'conversation',
+          transcript,
+          contextInput,
+          otherProfileContext: otherAnalyses,
+        }),
+      })
+
+      if (!analyzeResponse) throw new Error('Failed to analyze conversation snapshot');
+      const { analysis: conversationAnalysis } = await analyzeResponse.json()
+
+      setBusyDetail("Finalizing...");
+
+      const addAnalysisResponse = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId: conversationAnalysis._id }),
+      })
+
+      if (!addAnalysisResponse) throw new Error('Failed to link analysis to conversation snapshot');
+      router.push(`/ai-review/${conversationAnalysis._id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      stopBusy();
     }
-
-    const analyzeResponse = await fetch(`/api/ai-analysis/conversation/${conversationSnapshot._id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        type: 'conversation',
-        transcript,
-        contextInput,
-        otherProfileContext: otherAnalyses,
-      }),
-    })
-
-    if (!analyzeResponse) {
-      throw new Error('Failed to analyze conversation snapshot');
-    }
-
-    const { analysis: conversationAnalysis } = await analyzeResponse.json()
-
-    const addAnalysisResponse = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisId: conversationAnalysis._id }),
-    })
-
-    if (!addAnalysisResponse) {
-      throw new Error('Failed to link analysis to conversation snapshot');
-    }
-
-    router.push(`/ai-review/${conversationAnalysis._id}`);
   }
 
   const handleSubmitProfilePhotos = async () => {
@@ -286,63 +309,87 @@ const AnalysisForm = ({ type }: { type: string }) => {
   };
 
   const handleRunProfile = async () => {
-    if (!profileBlobs.length) throw new Error("No profile photos uploaded");
+    try {
+      if (!profileBlobs.length) throw new Error("No profile photos uploaded");
 
-    const response = await fetch('/api/profiles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        profilePhotos: profileBlobs,
-        context: contextInput,
-      }),
-    })
+      startBusy("Analyzing profile", "Creating profile snapshot…");
 
-    if (!response.ok) {
-      throw new Error(`Failed to create profile analysis: ${response.status} ${response.statusText}`);
+      const response = await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user!.id,
+          profilePhotos: profileBlobs,
+          context: contextInput,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create profile analysis: ${response.status} ${response.statusText}`);
+      }
+
+      const { profile } = await response.json();
+
+      if (!profile) {
+        throw new Error("Failed to create profile analysis");
+      }
+
+      setBusyDetail("Running AI analysis…");
+
+      const analyzeResponse = await fetch(`/api/ai-analysis/profile/${profile._id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user!.id,
+          type: "profile",
+          contextInput,
+        }),
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+      }
+
+      const { analysis: profileAnalysis } = await analyzeResponse.json();
+
+      if (!profileAnalysis?._id) {
+        throw new Error("AI analysis response missing analysis id");
+      }
+
+      setBusyDetail("Finalizing…");
+
+      const addAnalysisResponse = await fetch(`/api/profiles/${profile._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysisId: profileAnalysis._id }),
+      });
+
+      if (!addAnalysisResponse.ok) {
+        throw new Error("Failed to link analysis to profile");
+      }
+
+      router.push(`/ai-review/${profileAnalysis._id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      stopBusy();
     }
-
-    const { profile } = await response.json();
-
-    if (!profile) {
-      throw new Error('Failed to create profile analysis');
-    }
-
-    const analyzeResponse = await fetch(`/api/ai-analysis/profile/${profile._id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        type: 'profile',
-        contextInput,
-      }),
-    })
-
-    if (!analyzeResponse.ok) {
-      throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
-    }
-
-    const { analysis: profileAnalysis } = await analyzeResponse.json()
-
-    const addAnalysisResponse = await fetch(`/api/profiles/${profile._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisId: profileAnalysis._id }),
-    })
-
-    if (!addAnalysisResponse) {
-      throw new Error('Failed to link analysis to profile');
-    }
-
-    router.push(`/ai-review/${profileAnalysis._id}`);
   };
 
-
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={(next) => {
+      if (busy) return;
+      setOpen(next);
+    }}>
       <form>
         <DialogTrigger asChild>
-          <Button className="primary-gradient text-white" onClick={() => setStep(0)}>
+          <Button
+            className="primary-gradient text-white"
+            onClick={() => {
+              setStep(0);
+              setOpen(true);
+            }}
+          >
             {isConversation ? "Analyze Conversations" : isPhoto ? "Analyze Photos" : "Analyze Profile"}
           </Button>
         </DialogTrigger>
@@ -479,7 +526,37 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
             {/* Main panel */}
             <div className={cn((isConversation || isProfile) ? "lg:col-span-8" : "lg:col-span-12", "p-6")}>
-              <div className="h-full rounded-2xl border border-white/10 bg-white/3 p-5 flex flex-col min-h-0">
+              <div className="h-full rounded-2xl border border-white/10 bg-white/3 p-5 flex flex-col min-h-0 relative">
+                {busy && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center">
+                    {/* backdrop */}
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+
+                    {/* card */}
+                    <div className="relative w-[92%] max-w-lg rounded-2xl border border-white/10 bg-white/6 p-6 shadow-2xl">
+                      <div className="flex items-start gap-4">
+                        {/* spinner */}
+                        <div className="mt-1 h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-lg font-semibold text-white">{busyTitle || "Working…"}</p>
+                          <p className="mt-1 text-sm text-zinc-300">{busyDetail || "Please don’t close this window."}</p>
+
+                          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                            {/* “fake” indeterminate bar */}
+                            <div className="h-full w-1/3 animate-[loading_1.1s_ease-in-out_infinite] rounded-full primary-gradient" />
+                          </div>
+
+                          <p className="mt-3 text-xs text-zinc-500">
+                            This can take ~1–3 minutes depending on image count.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto pr-1">
                   {/* ===================== */}
                   {/* PHOTO */}
