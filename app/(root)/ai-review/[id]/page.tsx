@@ -559,14 +559,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                   className="rounded-lg border bg-background/40 p-4 space-y-3"
                 >
                   <p className="text-sm leading-relaxed">{step}</p>
-
-                  <CopyButton
-                    value={getCopySnippet(step)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Copy
-                  </CopyButton>
                 </div>
               ))}
             </div>
