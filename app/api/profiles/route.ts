@@ -1,8 +1,8 @@
 import {NextResponse} from "next/server";
 import dbConnect from "@/lib/mongoose";
-import {PutBlobResult} from "@vercel/blob";
 import MediaAsset from "@/database/media-asset.model";
 import Profile from "@/database/profile.model";
+import {auth} from "@/auth";
 
 export async function POST(request: Request): Promise<NextResponse> {
   await dbConnect();
@@ -34,9 +34,18 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function GET(_request: Request): Promise<NextResponse> {
-  await dbConnect()
+  const session = await auth();
+  const user = session?.user;
 
-  const profiles = await Profile.find().populate("myProfileAssetIds");
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
+  const profiles = await Profile
+    .find({ userId: user.id })
+    .populate("myProfileAssetIds");
 
   return NextResponse.json({ profiles });
 }

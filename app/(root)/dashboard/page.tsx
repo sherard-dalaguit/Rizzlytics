@@ -121,14 +121,9 @@ export default function DashboardPage() {
     return sortedConvos.filter((c) => Boolean(c.contextInput?.trim())).length;
   }, [sortedConvos]);
 
-  const profilesWithContext = useMemo(() => {
-    return sortedProfiles.filter((p) => Boolean(p.contextInput?.trim())).length;
-  }, [sortedProfiles]);
-
   const lastUploadAt = useMemo(() => {
     const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
     const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-    const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
     return Math.max(photoT, convoT);
   }, [latestPhoto, latestConvo, latestProfile]);
 
@@ -456,29 +451,28 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Stats row (meaningful, not “analyzed 8/8”) */}
-      <section className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <StatTile label="Photos uploaded" value={`${photoCount}`} icon={<IconPhoto className="h-5 w-5" />} />
+      {/* Stats row */}
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatTile
+          label="Photos uploaded"
+          value={`${photoCount}`}
+          icon={<IconPhoto className="h-5 w-5" />}
+        />
         <StatTile
           label="Conversations uploaded"
           value={`${convoCount}`}
           icon={<IconMessageCircle2 className="h-5 w-5" />}
         />
         <StatTile
-          label="Convos with context"
-          value={`${convWithContext}/${convoCount || 0}`}
-          icon={<IconSparkles className="h-5 w-5" />}
+          label="Profiles created"
+          value={`${profileCount}`}
+          icon={<IconUser className="h-5 w-5" />}
         />
         <StatTile
           label="Last upload"
           value={lastUploadLabel}
           icon={<IconTrendingUp className="h-5 w-5" />}
           valueClassName="text-sm font-semibold text-white"
-        />
-        <StatTile
-          label="Profiles created"
-          value={`${profileCount}`}
-          icon={<IconUser className="h-5 w-5" />}
         />
       </section>
 

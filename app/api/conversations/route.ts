@@ -3,6 +3,7 @@ import {NextResponse} from "next/server";
 import MediaAsset from "@/database/media-asset.model";
 import dbConnect from "@/lib/mongoose";
 import ConversationSnapshot from "@/database/conversation-snapshot.model";
+import {auth} from "@/auth";
 
 export async function POST(request: Request): Promise<NextResponse> {
   await dbConnect();
@@ -51,10 +52,17 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function GET(_: Request): Promise<NextResponse> {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   await dbConnect();
 
   const conversationSnapshots = await ConversationSnapshot
-    .find()
+    .find({ userId: user.id })
     .sort({ createdAt: -1 })
     .populate({
       path: "threadScreenshotAssetIds",

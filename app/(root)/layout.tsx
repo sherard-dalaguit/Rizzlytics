@@ -1,7 +1,13 @@
 import {ReactNode} from "react";
 import Navbar from "@/components/navigation/Navbar";
+import {auth} from "@/auth";
+import {redirect} from "next/navigation";
 
-const RootLayout = ({ children }: { children: ReactNode }) => {
+const RootLayout = async ({ children }: { children: ReactNode }) => {
+  const session = await auth();
+
+  if (!session?.user) redirect("/log-in");
+
   return (
     <main className="bg-zinc-950 h-screen relative">
       <Navbar />

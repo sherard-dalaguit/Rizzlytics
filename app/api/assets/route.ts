@@ -2,6 +2,7 @@ import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import MediaAsset, {IMediaAssetDoc} from "@/database/media-asset.model";
 import dbConnect from "@/lib/mongoose";
+import {auth} from "@/auth";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const formData = await request.formData();
@@ -52,10 +53,17 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function GET(_: Request): Promise<NextResponse> {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   await dbConnect();
 
   const mediaAssets = await MediaAsset
-    .find({ category: "self_photo" })
+    .find({ userId: user.id, category: "self_photo" })
     .sort({ createdAt: -1 });
 
   if (!mediaAssets) {
