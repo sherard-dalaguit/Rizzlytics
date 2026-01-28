@@ -7,7 +7,7 @@ import Profile from "@/database/profile.model";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
-  const { type, contextInput } = body;
+  const { userId, type, contextInput } = body;
 
   if (!type) {
     return NextResponse.json(
@@ -34,8 +34,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .slice(0, 9);
 
   const analysisResult = await runAIReview({type, profilePhotoUrls, contextInput});
-
-  const userId = /* get this from auth session later */ undefined as any;
 
   const analysis: IAnalysisDoc = await Analysis.create({
     userId,

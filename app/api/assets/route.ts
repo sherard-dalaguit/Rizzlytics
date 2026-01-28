@@ -4,40 +4,39 @@ import MediaAsset, {IMediaAssetDoc} from "@/database/media-asset.model";
 import dbConnect from "@/lib/mongoose";
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const { searchParams } = new URL(request.url);
+  const formData = await request.formData();
 
-  const filename = searchParams.get('filename');
-  const category = searchParams.get('category');
+  const file = formData.get("file");
+  const category = formData.get("category");
+  const userId = formData.get("userId");
 
-  if (!filename) {
+  if (!file || !(file instanceof File)) {
     return NextResponse.json(
-      { error: 'Missing required "filename" query parameter.' },
+      { error: 'Missing required "file" in form data.' },
       { status: 400 }
     );
   }
 
-  if (!category) {
+  if (!category || typeof category !== "string") {
     return NextResponse.json(
-      { error: 'Missing required "category" query parameter.' },
+      { error: 'Missing required "category" in form data.' },
       { status: 400 }
     );
   }
 
-  if (!request.body) {
+  if (!userId || typeof userId !== "string") {
     return NextResponse.json(
-      { error: 'Request body is required for file upload.' },
+      { error: 'Missing required "userId" in form data.' },
       { status: 400 }
     );
   }
 
-  const blob = await put(filename, request.body, {
+  const blob = await put(file.name, file, {
     access: 'public',
     allowOverwrite: true,
   });
 
   await dbConnect()
-
-  const userId = /* get this from auth session later */ undefined as any;
 
   const mediaAsset: IMediaAssetDoc = await MediaAsset.create({
     userId,
