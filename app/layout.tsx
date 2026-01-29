@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import {SessionProvider} from "next-auth/react";
 import {auth} from "@/auth";
+import {Analytics} from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             disableTransitionOnChange
           >
             {children}
+            <Analytics />
           </ThemeProvider>
         </body>
       </SessionProvider>
