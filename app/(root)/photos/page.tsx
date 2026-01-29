@@ -133,7 +133,7 @@ export default function PhotosPage() {
                   key={id}
                   className="group rounded-2xl border bg-muted/10 overflow-hidden"
                 >
-                  <div className="relative aspect-3/4 w-full">
+                  <div className="relative aspect-3/4 w-full sm:pb-0">
                     <Image
                       src={(asset as any).blobUrl}
                       alt="user photo"
@@ -181,16 +181,19 @@ export default function PhotosPage() {
                       </Button>
                     </div>
 
-                    {/* bottom strip */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                    {/* overlay strip */}
+                    <div className="absolute inset-x-3 bottom-3 sm:bottom-3 sm:inset-x-3">
                       <div className="relative rounded-xl overflow-hidden">
                         {/* gradient glow */}
                         <div className="pointer-events-none absolute inset-0 primary-gradient opacity-40 blur-2xl" />
 
-                        {/* dark glass layer */}
-                        <div className="relative rounded-xl bg-black/50 backdrop-blur-md px-3 py-3 flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-white text-sm font-medium leading-snug">{label}</p>
+                        {/* dark glass */}
+                        <div className="relative rounded-xl bg-black/50 backdrop-blur-md p-1.5 sm:p-3 flex items-center justify-end">
+                          {/* DESKTOP TEXT ONLY */}
+                          <div className="min-w-0 hidden sm:block">
+                            <p className="text-white text-sm font-medium leading-snug">
+                              {label}
+                            </p>
                             <p className="text-white/70 text-xs leading-snug">
                               Uploaded {uploaded} • ID {shortId(id)}
                             </p>
@@ -198,7 +201,7 @@ export default function PhotosPage() {
 
                           <Button
                             size="sm"
-                            className="primary-gradient text-white border-0 hover:opacity-95"
+                            className="w-full sm:w-auto primary-gradient text-white border-0 hover:opacity-95"
                             onClick={() => openPreview(asset)}
                             type="button"
                           >
@@ -216,7 +219,7 @@ export default function PhotosPage() {
 
           {/* Preview dialog */}
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-6xl p-0 overflow-hidden">
+            <DialogContent className="p-0 overflow-hidden w-[92vw] max-w-6xl max-h-[90vh] sm:w-auto rounded-2xl sm:rounded-3xl">
               {/* Header */}
               <DialogHeader className="px-5 py-4 backdrop-blur-xl border-b border-white/10 relative overflow-hidden">
                 <div className="pointer-events-none absolute inset-0 primary-gradient opacity-20 blur-3xl" />
@@ -226,7 +229,7 @@ export default function PhotosPage() {
               </DialogHeader>
 
               {previewAsset && (
-                <div className="grid grid-cols-1 md:grid-cols-7">
+                <div className="grid grid-cols-1 md:grid-cols-7 overflow-y-auto max-h-[calc(90vh-64px)]">
                   {/* Main image */}
                   <div className="md:col-span-4 relative h-[72vh]">
                     {/* subtle border frame */}
@@ -260,7 +263,7 @@ export default function PhotosPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-8">
                       <Button
                         className="w-full"
                         onClick={() => {
