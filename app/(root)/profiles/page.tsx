@@ -17,6 +17,7 @@ import { IconBrain, IconTrash, IconMaximize } from "@tabler/icons-react";
 import type { IMediaAssetDoc } from "@/database/media-asset.model";
 import type { IProfileDoc } from "@/database/profile.model";
 import { formatDate, shortId } from "@/lib/utils";
+import {Skeleton} from "@/components/ui/skeleton";
 
 type SortKey = "newest" | "oldest";
 
@@ -101,14 +102,6 @@ export default function ProfilesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <p className="text-muted-foreground">Loading profiles…</p>
-      </main>
-    );
-  }
-
   return (
     <main className="max-w-7xl mx-auto px-6 py-10 space-y-6">
       {/* Header */}
@@ -131,8 +124,55 @@ export default function ProfilesPage() {
         </div>
       </section>
 
-      {/* Empty */}
-      {!sorted.length ? (
+      {loading ? (
+        <section className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border bg-muted/10 overflow-hidden"
+            >
+              <div className="p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+                {/* Left side */}
+                <div className="flex items-center gap-4 min-w-0">
+                  {/* Stacked preview skeleton */}
+                  <div className="relative w-40 h-30 shrink-0">
+                    {[2, 1].map((layer) => (
+                      <div
+                        key={layer}
+                        className="absolute inset-0 rounded-xl border bg-black/30"
+                        style={{
+                          transform: `translate(${layer * 8}px, ${layer * 8}px)`,
+                          opacity: 0.45,
+                        }}
+                      />
+                    ))}
+
+                    <Skeleton className="absolute inset-0 rounded-xl" />
+                  </div>
+
+                  {/* Meta skeleton */}
+                  <div className="min-w-0 ml-4 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+
+                    <div className="flex gap-2 pt-1">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right actions skeleton */}
+                <div className="flex items-center gap-2 justify-end">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <Skeleton className="h-9 w-24 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : !sorted.length ? (
         <div className="rounded-2xl border bg-muted/20 p-10 text-center">
           <p className="text-lg font-medium">No profiles yet</p>
           <p className="text-sm text-muted-foreground mt-2">
@@ -210,7 +250,6 @@ export default function ProfilesPage() {
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <Badge variant="outline">Photos: {photoCount}</Badge>
                           {hasContext && <Badge variant="outline">Has context</Badge>}
-                          {analysisId ? <Badge variant="outline">Has analysis</Badge> : null}
                         </div>
                       </div>
                     </div>
@@ -258,7 +297,7 @@ export default function ProfilesPage() {
 
           {/* Preview dialog */}
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-6xl p-0 overflow-hidden">
+            <DialogContent className="p-0 w-[94vw] sm:w-auto max-w-6xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl">
               <DialogHeader className="px-5 py-4 backdrop-blur-xl border-b border-white/10 relative overflow-hidden">
                 <div className="pointer-events-none absolute inset-0 primary-gradient opacity-20 blur-3xl" />
                 <DialogTitle className="relative text-lg text-white">
@@ -267,115 +306,117 @@ export default function ProfilesPage() {
               </DialogHeader>
 
               {previewProfile && (
-                <div className="grid grid-cols-1 md:grid-cols-7">
-                  {/* Main image */}
-                  <div className="md:col-span-4 relative h-[72vh]">
-                    <div className="pointer-events-none absolute inset-0 bg-linear-to-b via-black/0 z-10" />
+                <div className="max-h-[calc(90vh-72px)] overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-7">
+                    {/* Main image */}
+                    <div className="md:col-span-4 relative h-[72vh]">
+                      <div className="pointer-events-none absolute inset-0 bg-linear-to-b via-black/0 z-10" />
 
-                    <div className="absolute inset-3 rounded-2xl border border-white/10 overflow-hidden bg-black">
-                      {activeUrl ? (
-                        <Image
-                          src={activeUrl}
-                          alt="preview"
-                          fill
-                          className="object-contain"
-                          sizes="(max-width: 1024px) 100vw, 900px"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                          No preview available
+                      <div className="absolute inset-3 rounded-2xl border border-white/10 overflow-hidden bg-black">
+                        {activeUrl ? (
+                          <Image
+                            src={activeUrl}
+                            alt="preview"
+                            fill
+                            className="object-contain"
+                            sizes="(max-width: 1024px) 100vw, 900px"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                            No preview available
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="md:col-span-3 backdrop-blur-xl border-l border-white/10 p-4 space-y-4">
+                      {/* Thumbnails */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-muted-foreground">Profile photos</p>
+                          <Badge variant="outline">
+                            {asAssetArray((previewProfile as any).myProfileAssetIds).length || 0}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Sidebar */}
-                  <div className="md:col-span-3 backdrop-blur-xl border-l border-white/10 p-4 space-y-4">
-                    {/* Thumbnails */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium text-muted-foreground">Profile photos</p>
-                        <Badge variant="outline">
-                          {asAssetArray((previewProfile as any).myProfileAssetIds).length || 0}
-                        </Badge>
+                        {!asAssetArray((previewProfile as any).myProfileAssetIds).length ? (
+                          <p className="text-xs text-muted-foreground">No photos uploaded.</p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-2">
+                            {asAssetArray((previewProfile as any).myProfileAssetIds)
+                              .slice(0, 12)
+                              .map((a) => (
+                                <button
+                                  key={a._id.toString()}
+                                  onClick={() => setActiveUrl((a as any).blobUrl)}
+                                  type="button"
+                                  className={[
+                                    "relative aspect-9/16 rounded-xl overflow-hidden border transition",
+                                    isActive((a as any).blobUrl)
+                                      ? "border-white/40 ring-2 ring-white/20"
+                                      : "border-white/10 hover:border-white/25 hover:opacity-95",
+                                  ].join(" ")}
+                                >
+                                  <Image
+                                    src={(a as any).blobUrl}
+                                    alt="thumb"
+                                    fill
+                                    className="object-cover"
+                                    sizes="180px"
+                                  />
+                                </button>
+                              ))}
+                          </div>
+                        )}
                       </div>
 
-                      {!asAssetArray((previewProfile as any).myProfileAssetIds).length ? (
-                        <p className="text-xs text-muted-foreground">No photos uploaded.</p>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          {asAssetArray((previewProfile as any).myProfileAssetIds)
-                            .slice(0, 12)
-                            .map((a) => (
-                              <button
-                                key={a._id.toString()}
-                                onClick={() => setActiveUrl((a as any).blobUrl)}
-                                type="button"
-                                className={[
-                                  "relative aspect-9/16 rounded-xl overflow-hidden border transition",
-                                  isActive((a as any).blobUrl)
-                                    ? "border-white/40 ring-2 ring-white/20"
-                                    : "border-white/10 hover:border-white/25 hover:opacity-95",
-                                ].join(" ")}
-                              >
-                                <Image
-                                  src={(a as any).blobUrl}
-                                  alt="thumb"
-                                  fill
-                                  className="object-cover"
-                                  sizes="180px"
-                                />
-                              </button>
-                            ))}
+                      {/* Context bubble */}
+                      <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md">
+                        <div className="relative p-3 z-10">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                            Context
+                          </p>
+
+                          <p className="text-xs text-white/85 leading-snug line-clamp-5">
+                            {(previewProfile as any).contextInput?.trim()
+                              ? (previewProfile as any).contextInput
+                              : "No context provided."}
+                          </p>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Context bubble */}
-                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md">
-                      <div className="relative p-3 z-10">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Context
-                        </p>
-
-                        <p className="text-xs text-white/85 leading-snug line-clamp-5">
-                          {(previewProfile as any).contextInput?.trim()
-                            ? (previewProfile as any).contextInput
-                            : "No context provided."}
-                        </p>
+                        <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none">
+                          <div className="absolute inset-0 primary-gradient opacity-20" />
+                        </div>
                       </div>
 
-                      <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none">
-                        <div className="absolute inset-0 primary-gradient opacity-20" />
+                      {/* Actions */}
+                      <div className="space-y-2 mb-8">
+                        <Button
+                          className="w-full disabled:opacity-60"
+                          disabled={!(previewProfile as any).analysisId}
+                          onClick={() => {
+                            const analysisId =
+                              (previewProfile as any).analysisId?.toString?.() ??
+                              (previewProfile as any).analysisId;
+                            if (!analysisId) return;
+                            window.location.href = `/ai-review/${analysisId}`;
+                          }}
+                          type="button"
+                        >
+                          <IconBrain className="h-5 w-5 mr-2" />
+                          View AI Review
+                        </Button>
+
+                        <Button
+                          className="w-full bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 hover:border-red-400/40"
+                          onClick={() => handleDelete(previewProfile._id.toString())}
+                          type="button"
+                        >
+                          <IconTrash className="h-5 w-5 mr-2" />
+                          Delete profile
+                        </Button>
                       </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="space-y-2">
-                      <Button
-                        className="w-full disabled:opacity-60"
-                        disabled={!(previewProfile as any).analysisId}
-                        onClick={() => {
-                          const analysisId =
-                            (previewProfile as any).analysisId?.toString?.() ??
-                            (previewProfile as any).analysisId;
-                          if (!analysisId) return;
-                          window.location.href = `/ai-review/${analysisId}`;
-                        }}
-                        type="button"
-                      >
-                        <IconBrain className="h-5 w-5 mr-2" />
-                        View AI Review
-                      </Button>
-
-                      <Button
-                        className="w-full bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 hover:border-red-400/40"
-                        onClick={() => handleDelete(previewProfile._id.toString())}
-                        type="button"
-                      >
-                        <IconTrash className="h-5 w-5 mr-2" />
-                        Delete profile
-                      </Button>
                     </div>
                   </div>
                 </div>

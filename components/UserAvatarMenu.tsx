@@ -35,7 +35,7 @@ export default function UserAvatarMenu({
           <UserAvatar
             name={name}
             imageUrl={imageUrl}
-            className="h-9 w-9"
+            className="h-9 w-9 mr-4"
           />
         </button>
       </DropdownMenuTrigger>

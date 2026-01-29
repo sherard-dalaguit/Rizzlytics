@@ -1,6 +1,6 @@
 'use client';
 
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {FileUpload} from "@/components/ui/file-upload";
 import Image from "next/image";
@@ -13,6 +13,7 @@ import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreensh
 import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot";
 import {useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
+import ReorderableFileGrid from "@/components/ReorderableFileGrid";
 
 type UploadResponse = {
   blob: PutBlobResult;
@@ -52,6 +53,23 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
   const goNext = () => setStep((s) => Math.min(maxStep, s + 1));
   const goBack = () => setStep((s) => Math.max(0, s - 1));
+
+  const [busy, setBusy] = useState(false);
+  const [busyTitle, setBusyTitle] = useState<string>("");
+  const [busyDetail, setBusyDetail] = useState<string>("");
+  const [open, setOpen] = useState(false);
+
+  const startBusy = (title: string, detail?: string) => {
+    setBusyTitle(title);
+    setBusyDetail(detail ?? "");
+    setBusy(true);
+  };
+
+  const stopBusy = () => {
+    setBusy(false);
+    setBusyTitle("");
+    setBusyDetail("");
+  };
 
   const handleFileUpload = (files: File[]) => {
     setFiles(files);
@@ -93,44 +111,51 @@ const AnalysisForm = ({ type }: { type: string }) => {
   }
 
   const handleSubmitPhoto = async () => {
-    const selected = getSelectedFiles();
-    if (!selected.length) throw new Error("No file selected");
+    try {
+      startBusy("Analyzing photo", "Uploading image…");
 
-    const { blob, mediaAsset } = await uploadOne(selected[0], "self_photo");
-    setBlob(blob);
+      const selected = getSelectedFiles();
+      if (!selected.length) throw new Error("No file selected");
 
-    const analyzeResponse = await fetch(`/api/ai-analysis/photo/${mediaAsset._id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        type: 'photo',
-        photoUrl: blob.url,
-      }),
-    });
+      const { blob, mediaAsset } = await uploadOne(selected[0], "self_photo");
+      setBlob(blob);
 
-    if (!analyzeResponse.ok) {
-      throw new Error(`Failed to analyze photo: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+      setBusyDetail("Running AI analysis…");
+
+      const analyzeResponse = await fetch(`/api/ai-analysis/photo/${mediaAsset._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user!.id,
+          type: 'photo',
+          photoUrl: blob.url,
+        }),
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error(`Failed to analyze photo: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+      }
+
+      const { analysis } = await analyzeResponse.json();
+      if (!analysis) throw new Error('Failed to analyze photo');
+
+      setBusyDetail("Finalizing…");
+
+      const addAnalysisResponse = await fetch(`/api/assets/${mediaAsset._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId: analysis._id }),
+      });
+
+      if (!addAnalysisResponse.ok) throw new Error('Failed to link analysis to media asset');
+
+      router.push(`/ai-review/${analysis._id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      stopBusy();
     }
-
-    const { analysis } = await analyzeResponse.json();
-
-    if (!analysis) {
-      throw new Error('Failed to analyze photo');
-    }
-
-    const addAnalysisResponse = await fetch(`/api/assets/${mediaAsset._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisId: analysis._id }),
-    })
-
-    if (!addAnalysisResponse.ok) {
-      throw new Error('Failed to link analysis to media asset');
-    }
-
-    router.push(`/ai-review/${analysis._id}`);
-  }
+  };
 
   const handleSubmitThreadScreenshots = async() => {
     if (!threadFiles.length) throw new Error("No files selected");
@@ -155,122 +180,121 @@ const AnalysisForm = ({ type }: { type: string }) => {
   }
 
   const handleSubmitConversationSnapshot = async() => {
-    const response = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        threadScreenshots: threadBlobs,
-        otherProfileScreenshots: otherBlobs,
-        context: contextInput,
-      }),
-    });
+    try {
+      startBusy("Analyzing conversation", "Creating snapshot...");
 
-    if (!response.ok) {
-      throw new Error(`Failed to create conversation snapshot: ${response.status} ${response.statusText}`);
-    }
-    const { conversationSnapshot } = await response.json();
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user!.id,
+          threadScreenshots: threadBlobs,
+          otherProfileScreenshots: otherBlobs,
+          context: contextInput,
+        }),
+      });
+      if (!response.ok) throw new Error(`Failed to create conversation snapshot: ${response.status} ${response.statusText}`);
 
-    if (!conversationSnapshot) {
-      throw new Error('Failed to create conversation snapshot');
-    }
+      const { conversationSnapshot } = await response.json();
+      if (!conversationSnapshot) throw new Error('Failed to create conversation snapshot');
 
-    const extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
+      setBusyDetail("Extracting messages from screenshots...");
 
-    for (const threadBlob of threadBlobs) {
-      const messages = await analyzeThreadScreenshot(threadBlob);
-
-      if (!messages?.length) {
-        throw new Error(`Failed to analyze thread screenshot: ${threadBlob.pathname}`);
+      const extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
+      for (const threadBlob of threadBlobs) {
+        const messages = await analyzeThreadScreenshot(threadBlob);
+        if (!messages?.length) throw new Error(`Failed to analyze thread screenshot: ${threadBlob.pathname}`);
+        extracted.push(...messages.map(m => ({ speaker: m.speaker, text: m.text })));
       }
+      if (!extracted.length) throw new Error('Failed to extract transcript messages from screenshots');
 
-      extracted.push(...messages.map(m => ({ speaker: m.speaker, text: m.text })));
-    }
+      setBusyDetail("Saving transcript...");
 
-    if (!extracted.length) {
-      throw new Error('Failed to extract transcript messages from screenshots');
-    }
+      const transcript: ITranscriptMessage[] = extracted.map((m, idx) => ({
+        order: idx + 1,
+        speaker: m.speaker,
+        text: m.text,
+      }))
 
-    const transcript: ITranscriptMessage[] = extracted.map((m, idx) => ({
-      order: idx + 1,
-      speaker: m.speaker,
-      text: m.text,
-    }))
+      console.log(transcript);
 
-    console.log(transcript);
-
-    // once all messages are collected, edit conversationSnapshot transcript in MongoDB
-    const res = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript }),
-    });
-
-    if (!res.ok) {
-      const errorPayload = await res.json().catch(() => null);
-      throw new Error(
-        errorPayload?.error ??
-        `Failed to update conversation snapshot with transcript (status ${res.status})`
-      );
-    }
-
-    let otherAnalyses: string = '';
-
-    if (otherBlobs?.length) {
-      for (const otherBlob of otherBlobs) {
-        const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
-
-        if (!otherAnalysis) {
-          throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
-        }
-
-        otherAnalyses += " " + otherAnalysis.trim();
-      }
-
-      const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+      // once all messages are collected, edit conversationSnapshot transcript in MongoDB
+      const res = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({otherProfileAnalyses: otherAnalyses}),
-      })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript }),
+      });
 
-      if (!finalRes.ok) {
-        const errorPayload = await finalRes.json().catch(() => null);
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => null);
         throw new Error(
           errorPayload?.error ??
-          `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
+          `Failed to update conversation snapshot with transcript (status ${res.status})`
         );
       }
+
+      setBusyDetail("Reading other profile (optional)...");
+
+      let otherAnalyses: string = '';
+
+      if (otherBlobs?.length) {
+        for (const otherBlob of otherBlobs) {
+          const otherAnalysis = await analyzeOtherScreenshot(otherBlob);
+
+          if (!otherAnalysis) {
+            throw new Error(`Failed to analyze other profile screenshot: ${otherBlob.pathname}`);
+          }
+
+          otherAnalyses += " " + otherAnalysis.trim();
+        }
+
+        const finalRes = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({otherProfileAnalyses: otherAnalyses}),
+        })
+
+        if (!finalRes.ok) {
+          const errorPayload = await finalRes.json().catch(() => null);
+          throw new Error(
+            errorPayload?.error ??
+            `Failed to update conversation snapshot with other profile analyses (status ${finalRes.status})`
+          );
+        }
+      }
+
+      setBusyDetail("Running AI analysis...");
+
+      const analyzeResponse = await fetch(`/api/ai-analysis/conversation/${conversationSnapshot._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user!.id,
+          type: 'conversation',
+          transcript,
+          contextInput,
+          otherProfileContext: otherAnalyses,
+        }),
+      })
+
+      if (!analyzeResponse) throw new Error('Failed to analyze conversation snapshot');
+      const { analysis: conversationAnalysis } = await analyzeResponse.json()
+
+      setBusyDetail("Finalizing...");
+
+      const addAnalysisResponse = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId: conversationAnalysis._id }),
+      })
+
+      if (!addAnalysisResponse) throw new Error('Failed to link analysis to conversation snapshot');
+      router.push(`/ai-review/${conversationAnalysis._id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      stopBusy();
     }
-
-    const analyzeResponse = await fetch(`/api/ai-analysis/conversation/${conversationSnapshot._id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        type: 'conversation',
-        transcript,
-        contextInput,
-        otherProfileContext: otherAnalyses,
-      }),
-    })
-
-    if (!analyzeResponse) {
-      throw new Error('Failed to analyze conversation snapshot');
-    }
-
-    const { analysis: conversationAnalysis } = await analyzeResponse.json()
-
-    const addAnalysisResponse = await fetch(`/api/conversations/${conversationSnapshot._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisId: conversationAnalysis._id }),
-    })
-
-    if (!addAnalysisResponse) {
-      throw new Error('Failed to link analysis to conversation snapshot');
-    }
-
-    router.push(`/ai-review/${conversationAnalysis._id}`);
   }
 
   const handleSubmitProfilePhotos = async () => {
@@ -285,304 +309,524 @@ const AnalysisForm = ({ type }: { type: string }) => {
   };
 
   const handleRunProfile = async () => {
-    if (!profileBlobs.length) throw new Error("No profile photos uploaded");
+    try {
+      if (!profileBlobs.length) throw new Error("No profile photos uploaded");
 
-    const response = await fetch('/api/profiles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        profilePhotos: profileBlobs,
-        context: contextInput,
-      }),
-    })
+      startBusy("Analyzing profile", "Creating profile snapshot…");
 
-    if (!response.ok) {
-      throw new Error(`Failed to create profile analysis: ${response.status} ${response.statusText}`);
+      const response = await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user!.id,
+          profilePhotos: profileBlobs,
+          context: contextInput,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create profile analysis: ${response.status} ${response.statusText}`);
+      }
+
+      const { profile } = await response.json();
+
+      if (!profile) {
+        throw new Error("Failed to create profile analysis");
+      }
+
+      setBusyDetail("Running AI analysis…");
+
+      const analyzeResponse = await fetch(`/api/ai-analysis/profile/${profile._id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user!.id,
+          type: "profile",
+          contextInput,
+        }),
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
+      }
+
+      const { analysis: profileAnalysis } = await analyzeResponse.json();
+
+      if (!profileAnalysis?._id) {
+        throw new Error("AI analysis response missing analysis id");
+      }
+
+      setBusyDetail("Finalizing…");
+
+      const addAnalysisResponse = await fetch(`/api/profiles/${profile._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysisId: profileAnalysis._id }),
+      });
+
+      if (!addAnalysisResponse.ok) {
+        throw new Error("Failed to link analysis to profile");
+      }
+
+      router.push(`/ai-review/${profileAnalysis._id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      stopBusy();
     }
-
-    const { profile } = await response.json();
-
-    if (!profile) {
-      throw new Error('Failed to create profile analysis');
-    }
-
-    const analyzeResponse = await fetch(`/api/ai-analysis/profile/${profile._id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user!.id,
-        type: 'profile',
-        contextInput,
-      }),
-    })
-
-    if (!analyzeResponse.ok) {
-      throw new Error(`Failed to analyze profile: ${analyzeResponse.status} ${analyzeResponse.statusText}`);
-    }
-
-    const { analysis: profileAnalysis } = await analyzeResponse.json()
-
-    const addAnalysisResponse = await fetch(`/api/profiles/${profile._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisId: profileAnalysis._id }),
-    })
-
-    if (!addAnalysisResponse) {
-      throw new Error('Failed to link analysis to profile');
-    }
-
-    router.push(`/ai-review/${profileAnalysis._id}`);
   };
 
-
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={(next) => {
+      if (busy) return;
+      setOpen(next);
+    }}>
       <form>
         <DialogTrigger asChild>
-          <Button className="primary-gradient text-white" onClick={() => setStep(0)}>
-            {isConversation
-              ? 'Analyze Conversations'
-              : isPhoto
-                ? 'Analyze Photos'
-                : 'Analyze Profile'
-            }
+          <Button
+            className="primary-gradient text-white"
+            onClick={() => {
+              setStep(0);
+              setOpen(true);
+            }}
+          >
+            {isConversation ? "Analyze Conversations" : isPhoto ? "Analyze Photos" : "Analyze Profile"}
           </Button>
         </DialogTrigger>
 
-        <DialogContent className={cn(
-          "w-[90vw] h-[90vh] p-8 max-w-none max-h-none",
-          type === 'photo' ? 'lg:w-[60vw] lg:h-[60vh]' : 'lg:w-[80vw] lg:h-[80vh]'
-        )}>
+        <DialogContent
+          className={cn(
+            "w-[94vw] h-[92vh] max-w-none max-h-none p-0 overflow-hidden flex flex-col min-h-0",
+            type === "photo" ? "lg:w-[74vw] lg:h-[74vh]" : "lg:w-[88vw] lg:h-[86vh]"
+          )}
+        >
+          {/* Header */}
+          <div className="relative border-b border-white/10 bg-white/3 px-6 py-5">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_240px_at_20%_0%,rgba(255,70,197,0.12),transparent_60%),radial-gradient(700px_240px_at_80%_0%,rgba(209,179,255,0.10),transparent_60%)]" />
+            <div className="relative">
+              <DialogHeader className="space-y-1">
+                <DialogTitle className="text-xl font-semibold text-white">
+                  {isConversation
+                    ? "Upload Conversation Thread"
+                    : isPhoto
+                      ? "Upload Photo"
+                      : "Upload Profile Photos"}
+                </DialogTitle>
 
-          <DialogHeader>
-            <DialogTitle>
-              {isConversation
-                ? 'Upload Your Conversation Thread Screenshots'
-                : isPhoto
-                  ? 'Upload Your Photo'
-                  : 'Upload Your Profile'
-              }
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="overflow-y-auto max-h-[50vh] lg:max-h-[65vh]">
-            {isPhoto && (
-              <div className="flex flex-col items-center gap-4">
-                <FileUpload onChange={handleFileUpload} type="photo" />
-                <input ref={inputFileRef} type="file" className="hidden" />
-                <Button
-                  className="primary-gradient text-white px-12 py-6"
-                  type="button"
-                  onClick={handleSubmitPhoto}
-                >
-                  Upload
-                </Button>
-
-                {blob && (
-                  <Image
-                    key={blob.pathname}
-                    src={blob.url}
-                    alt="uploaded photo"
-                    width={200}
-                    height={200}
-                    className="rounded-xl"
-                  />
-                )}
-              </div>
-            )}
-
-            {isConversation && (
-              <>
-                {/* Step indicator (optional) */}
-                <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className={step === 0 ? "font-semibold text-foreground" : ""}>1) Thread</span>
-                  <span>•</span>
-                  <span className={step === 1 ? "font-semibold text-foreground" : ""}>2) Other (optional)</span>
-                  <span>•</span>
-                  <span className={step === 2 ? "font-semibold text-foreground" : ""}>3) Context (optional)</span>
-                </div>
-
-                {/* STEP 0: message thread screenshots */}
-                {step === 0 && (
-                  <div className="flex flex-col items-center gap-4">
-                    <FileUpload onChange={(f) => setThreadFiles(f)} type="conversation" />
-
-                    <Button
-                      type="button"
-                      className="primary-gradient text-white px-12 py-6"
-                      onClick={handleSubmitThreadScreenshots}
-                    >
-                      Upload Thread Screenshots
-                    </Button>
-
-                    {threadBlobs.length > 0 && (
-                      <section className="mt-2 grid grid-cols-4 gap-4">
-                        {threadBlobs.map((blob) => (
-                          <Image
-                            key={blob.pathname}
-                            src={blob.url}
-                            alt="uploaded thread screenshot"
-                            width={150}
-                            height={150}
-                            className="rounded-xl"
-                          />
-                        ))}
-                      </section>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 1: optional other profile screenshots */}
-                {step === 1 && (
-                  <div className="flex flex-col items-center gap-4">
-                    <FileUpload onChange={(f) => setOtherFiles(f)} type="conversation" />
-
-                    <Button
-                      type="button"
-                      className="primary-gradient text-white px-12 py-6"
-                      onClick={handleSubmitOtherProfileScreenshots}
-                    >
-                      Upload Other Profile Screenshots
-                    </Button>
-
-                    {otherBlobs.length > 0 && (
-                      <section className="mt-2 grid grid-cols-4 gap-4">
-                        {otherBlobs.map((blob) => (
-                          <Image
-                            key={blob.pathname}
-                            src={blob.url}
-                            alt="uploaded other profile screenshot"
-                            width={150}
-                            height={150}
-                            className="rounded-xl"
-                          />
-                        ))}
-                      </section>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 2: optional context input */}
-                {step === 2 && (
-                  <div className="flex flex-col gap-3">
-                    <label className="text-sm font-medium">Context (optional)</label>
-                    <textarea
-                      value={contextInput}
-                      onChange={(e) => setContextInput(e.target.value)}
-                      placeholder="e.g. What's your goal (get a reply, set a date), what happened so far, anything the AI should know?"
-                      className="min-h-40 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    />
-
-                    <Button
-                      type="button"
-                      className="primary-gradient text-white px-12 py-6 self-center"
-                      disabled={threadBlobs.length === 0}
-                      onClick={handleSubmitConversationSnapshot}
-                    >
-                      Run Analysis
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {isProfile && (
-              <>
-                <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className={step === 0 ? "font-semibold text-foreground" : ""}>1) Photos</span>
-                  <span>•</span>
-                  <span className={step === 1 ? "font-semibold text-foreground" : ""}>2) Context (optional)</span>
-                </div>
-
-                {/* STEP 0: profile photos */}
-                {step === 0 && (
-                  <div className="flex flex-col items-center gap-4">
-                    <FileUpload onChange={(f) => setProfileFiles(f)} type="profile" />
-
-                    <Button
-                      type="button"
-                      className="primary-gradient text-white px-12 py-6"
-                      onClick={handleSubmitProfilePhotos}
-                    >
-                      Upload Profile Photos
-                    </Button>
-
-                    {profileBlobs.length > 0 && (
-                      <section className="mt-2 grid grid-cols-4 gap-4">
-                        {profileBlobs.map((blob) => (
-                          <Image
-                            key={blob.pathname}
-                            src={blob.url}
-                            alt="uploaded profile photo"
-                            width={150}
-                            height={150}
-                            className="rounded-xl"
-                          />
-                        ))}
-                      </section>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 1: optional context */}
-                {step === 1 && (
-                  <div className="flex flex-col gap-3">
-                    <label className="text-sm font-medium">Context (optional)</label>
-                    <textarea
-                      value={contextInput}
-                      onChange={(e) => setContextInput(e.target.value)}
-                      placeholder="e.g. What vibe are you going for? (clean boy, artsy, gym, traveler). What kind of girls are you targeting? Any constraints?"
-                      className="min-h-40 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    />
-
-                    <Button
-                      type="button"
-                      className="primary-gradient text-white px-12 py-6 self-center"
-                      disabled={profileBlobs.length === 0}
-                      onClick={handleRunProfile}
-                    >
-                      Run Profile Analysis
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
+                <p className="text-sm text-zinc-400">
+                  {isPhoto
+                    ? "Upload one image. You’ll get specific, actionable fixes (lighting, framing, expression, vibe)."
+                    : isProfile
+                      ? "Upload your full set. The AI evaluates the story, variety, consistency, and strongest ordering."
+                      : "Upload thread screenshots in order. Add optional context for higher-signal messaging advice."}
+                </p>
+              </DialogHeader>
+            </div>
           </div>
 
-          {(isConversation || isProfile) && (
-            <DialogFooter className="mt-auto w-full flex items-end justify-between">
-              <button
-                type="button"
-                onClick={goBack}
-                disabled={step === 0}
-                className="relative inline-flex h-12 w-32 overflow-hidden rounded-lg p-px focus:outline-none disabled:opacity-50"
-              >
-                <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)] pointer-events-none z-0"/>
-                <span className="relative z-10 inline-flex h-full w-full items-center justify-center rounded-lg bg-slate-950 px-7 py-1 text-md font-medium text-white gap-2">
-                  Back
-                </span>
-              </button>
+          {/* Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-12">
+            {/* Left rail (only for conversation/profile) */}
+            {(isConversation || isProfile) ? (
+              <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-white/10 bg-white/2 p-6">
+                {/* Stepper */}
+                <div className="mb-6">
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">Steps</p>
 
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={step === maxStep}
-                className="relative inline-flex h-12 w-32 overflow-hidden rounded-lg p-px focus:outline-none disabled:opacity-50"
-              >
-                <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)] pointer-events-none z-0"/>
-                <span className="relative z-10 inline-flex h-full w-full items-center justify-center rounded-lg bg-slate-950 px-7 py-1 text-md font-medium text-white gap-2">
-                  Next
-                </span>
-              </button>
-            </DialogFooter>
-          )}
+                  {isConversation && (
+                    <div className="mt-3 space-y-2">
+                      {[
+                        { idx: 0, label: "Thread screenshots" },
+                        { idx: 1, label: "Other profile (optional)" },
+                        { idx: 2, label: "Context (optional)" },
+                      ].map((s) => (
+                        <div
+                          key={s.idx}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl border px-3 py-3",
+                            step === s.idx ? "border-white/15 bg-white/5" : "border-white/10 bg-white/2"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
+                              step === s.idx ? "bg-white/10 text-white" : "bg-white/6 text-zinc-300"
+                            )}
+                          >
+                            {s.idx + 1}
+                          </span>
+                            <span className="text-sm text-zinc-200">{s.label}</span>
+                          </div>
 
+                          <span className="text-xs text-zinc-500">
+                          {step > s.idx ? "Done" : step === s.idx ? "Now" : ""}
+                        </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isProfile && (
+                    <div className="mt-3 space-y-2">
+                      {[
+                        { idx: 0, label: "Profile photos" },
+                        { idx: 1, label: "Context (optional)" },
+                      ].map((s) => (
+                        <div
+                          key={s.idx}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl border px-3 py-3",
+                            step === s.idx ? "border-white/15 bg-white/5" : "border-white/10 bg-white/2"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
+                              step === s.idx ? "bg-white/10 text-white" : "bg-white/6 text-zinc-300"
+                            )}
+                          >
+                            {s.idx + 1}
+                          </span>
+                            <span className="text-sm text-zinc-200">{s.label}</span>
+                          </div>
+
+                          <span className="text-xs text-zinc-500">
+                          {step > s.idx ? "Done" : step === s.idx ? "Now" : ""}
+                        </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tips */}
+                <div className="rounded-2xl border border-white/10 bg-white/3 p-4">
+                  <p className="text-sm font-semibold text-white">Tips</p>
+                  <ul className="mt-2 space-y-2 text-sm text-zinc-400">
+                    {isProfile && (
+                      <>
+                        <li>• Ideal: 4–6 photos for strongest signal.</li>
+                        <li>• Include at least 1 full-body + 1 social shot.</li>
+                        <li>• Avoid duplicate poses/outfits.</li>
+                      </>
+                    )}
+                    {isConversation && (
+                      <>
+                        <li>• Upload screenshots in order (top → bottom).</li>
+                        <li>• Include both sides (don’t crop out replies).</li>
+                        <li>• Add context if you want “get a date” vs “get a reply” advice.</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Main panel */}
+            <div className={cn((isConversation || isProfile) ? "lg:col-span-8" : "lg:col-span-12", "p-6")}>
+              <div className="h-full rounded-2xl border border-white/10 bg-white/3 p-5 flex flex-col min-h-0 relative">
+                {busy && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center">
+                    {/* backdrop */}
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+
+                    {/* card */}
+                    <div className="relative w-[92%] max-w-lg rounded-2xl border border-white/10 bg-white/6 p-6 shadow-2xl">
+                      <div className="flex items-start gap-4">
+                        {/* spinner */}
+                        <div className="mt-1 h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-lg font-semibold text-white">{busyTitle || "Working…"}</p>
+                          <p className="mt-1 text-sm text-zinc-300">{busyDetail || "Please don’t close this window."}</p>
+
+                          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                            {/* “fake” indeterminate bar */}
+                            <div className="h-full w-1/3 animate-[loading_1.1s_ease-in-out_infinite] rounded-full primary-gradient" />
+                          </div>
+
+                          <p className="mt-3 text-xs text-zinc-500">
+                            This can take ~1–3 minutes depending on image count.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 overflow-y-auto pr-1">
+                  {/* ===================== */}
+                  {/* PHOTO */}
+                  {/* ===================== */}
+                  {isPhoto && (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                      {/* Dropzone */}
+                      <div className="lg:col-span-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/3 p-5">
+                          <p className="text-sm font-semibold text-white">Select a photo</p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Drag & drop or click to upload. Best results with clear, natural lighting.
+                          </p>
+
+                          <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/20 p-4 hover:bg-black/25 transition-colors">
+                            <FileUpload onChange={handleFileUpload} type="photo" />
+                            <input ref={inputFileRef} type="file" className="hidden" />
+                          </div>
+
+                          <div className="mt-4 flex items-center gap-3">
+                            <Button
+                              className="primary-gradient text-white px-6"
+                              type="button"
+                              onClick={handleSubmitPhoto}
+                            >
+                              Upload & Analyze
+                            </Button>
+
+                            <span className="text-sm text-zinc-500">
+                            {blob ? "Ready ✅" : "No file selected"}
+                          </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Preview */}
+                      <div className="lg:col-span-7">
+                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                          <p className="text-sm font-semibold text-white">Preview</p>
+
+                          <div className="mt-3 relative aspect-4/5 w-full overflow-hidden rounded-xl border border-white/10 bg-white/2 flex items-center justify-center">
+                            {blob ? (
+                              <Image
+                                key={blob.pathname}
+                                src={blob.url}
+                                alt="uploaded photo"
+                                fill
+                                className="object-contain"
+                              />
+                            ) : (
+                              <div className="text-sm text-zinc-500 px-6 text-center">
+                                Upload a photo to preview it here.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===================== */}
+                  {/* CONVERSATION */}
+                  {/* ===================== */}
+                  {isConversation && (
+                    <>
+                      {step === 0 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
+                          <p className="text-sm font-semibold text-white">Thread screenshots</p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Upload the main message thread screenshots (in order).
+                          </p>
+
+                          <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/20 p-4 hover:bg-black/25 transition-colors">
+                            <FileUpload onChange={(f) => setThreadFiles(f)} type="conversation" />
+                          </div>
+
+                          <div className="mt-4 flex items-center gap-3">
+                            <Button
+                              type="button"
+                              className="primary-gradient text-white px-6"
+                              onClick={handleSubmitThreadScreenshots}
+                            >
+                              Upload Thread
+                            </Button>
+
+                            <span className="text-sm text-zinc-500">
+                            {threadBlobs.length > 0 ? `${threadBlobs.length} uploaded` : "None uploaded"}
+                          </span>
+                          </div>
+
+                          {threadFiles.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-xs tracking-wide text-zinc-500 mb-2">
+                                Reorder before upload | Images won&apos;t load until re-ordered
+                              </p>
+
+                              <ReorderableFileGrid files={threadFiles} setFiles={setThreadFiles} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {step === 1 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
+                          <p className="text-sm font-semibold text-white">Other profile (optional)</p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Upload screenshots of their profile to improve context.
+                          </p>
+
+                          <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/20 p-4 hover:bg-black/25 transition-colors">
+                            <FileUpload onChange={(f) => setOtherFiles(f)} type="conversation" />
+                          </div>
+
+                          <div className="mt-4 flex items-center gap-3">
+                            <Button
+                              type="button"
+                              className="primary-gradient text-white px-6"
+                              onClick={handleSubmitOtherProfileScreenshots}
+                            >
+                              Upload Profile Screens
+                            </Button>
+
+                            <span className="text-sm text-zinc-500">
+                            {otherBlobs.length > 0 ? `${otherBlobs.length} uploaded` : "None uploaded"}
+                          </span>
+                          </div>
+
+                          {otherFiles.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-xs tracking-wide text-zinc-500 mb-2">
+                                Reorder before upload | Images won&apos;t load until re-ordered
+                              </p>
+
+                              <ReorderableFileGrid files={otherFiles} setFiles={setOtherFiles} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {step === 2 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
+                          <p className="text-sm font-semibold text-white">Context (optional)</p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Add your goal so the AI gives the right next move.
+                          </p>
+
+                          <textarea
+                            value={contextInput}
+                            onChange={(e) => setContextInput(e.target.value)}
+                            placeholder="e.g. I want to set a date this week, but her replies slowed down…"
+                            className="mt-4 min-h-36 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-white/15"
+                          />
+
+                          <div className="mt-4">
+                            <Button
+                              type="button"
+                              className="primary-gradient text-white px-6"
+                              disabled={threadBlobs.length === 0}
+                              onClick={handleSubmitConversationSnapshot}
+                            >
+                              Run Analysis
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* ===================== */}
+                  {/* PROFILE */}
+                  {/* ===================== */}
+                  {isProfile && (
+                    <>
+                      {step === 0 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
+                          <p className="text-sm font-semibold text-white">Profile photo set</p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Upload the photos you want analyzed as a set.
+                          </p>
+
+                          <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/20 p-4 hover:bg-black/25 transition-colors">
+                            <FileUpload onChange={(f) => setProfileFiles(f)} type="profile" />
+                          </div>
+
+                          <div className="mt-4 flex items-center gap-3">
+                            <Button
+                              type="button"
+                              className="primary-gradient text-white px-6"
+                              onClick={handleSubmitProfilePhotos}
+                            >
+                              Upload Photos
+                            </Button>
+
+                            <span className="text-sm text-zinc-500">
+                            {profileBlobs.length > 0 ? `${profileBlobs.length} uploaded` : "None uploaded"}
+                          </span>
+                          </div>
+
+                          {profileFiles.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-xs tracking-wide text-zinc-500 mb-2">
+                                Order matters (1 = first photo) | Images won&apos;t load until re-ordered
+                              </p>
+
+                              <ReorderableFileGrid files={profileFiles} setFiles={setProfileFiles} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {step === 1 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/2 p-5">
+                          <p className="text-sm font-semibold text-white">Context (optional)</p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            What vibe are you going for, and who are you trying to attract?
+                          </p>
+
+                          <textarea
+                            value={contextInput}
+                            onChange={(e) => setContextInput(e.target.value)}
+                            placeholder="e.g. clean boy / gym + travel vibe, targeting cute feminine girls…"
+                            className="mt-4 min-h-36 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-white/15"
+                          />
+
+                          <div className="mt-4">
+                            <Button
+                              type="button"
+                              className="primary-gradient text-white px-6"
+                              disabled={profileBlobs.length === 0}
+                              onClick={handleRunProfile}
+                            >
+                              Run Profile Analysis
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Footer actions for step flows */}
+                {(isConversation || isProfile) && (
+                  <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-5">
+                    <button
+                      type="button"
+                      onClick={goBack}
+                      disabled={step === 0}
+                      className="rounded-xl border border-white/10 bg-white/3 px-5 py-2.5 text-sm text-white hover:bg-white/5 disabled:opacity-40"
+                    >
+                      Back
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      disabled={step === maxStep}
+                      className="rounded-xl border border-white/10 bg-white/3 px-5 py-2.5 text-sm text-white hover:bg-white/5 disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </form>
     </Dialog>
-  )
+  );
+
 }
 
 export default AnalysisForm;

@@ -17,6 +17,7 @@ import { IconBrain, IconTrash, IconMaximize } from "@tabler/icons-react";
 import { IConversationSnapshotDoc } from "@/database/conversation-snapshot.model";
 import { IMediaAssetDoc } from "@/database/media-asset.model";
 import { formatDate, shortId } from "@/lib/utils";
+import {Skeleton} from "@/components/ui/skeleton";
 
 type SortKey = "newest" | "oldest";
 
@@ -105,14 +106,6 @@ export default function ConversationsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <p className="text-muted-foreground">Loading conversations…</p>
-      </main>
-    );
-  }
-
   return (
     <main className="max-w-7xl mx-auto px-6 py-10 space-y-6">
       {/* Header */}
@@ -137,8 +130,56 @@ export default function ConversationsPage() {
         </div>
       </section>
 
-      {/* Empty */}
-      {!sorted.length ? (
+      {loading ? (
+          <section className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border bg-muted/10 overflow-hidden"
+              >
+                <div className="p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+                  {/* Left side */}
+                  <div className="flex items-center gap-4 min-w-0">
+                    {/* Stacked preview skeleton */}
+                    <div className="relative w-40 h-30 shrink-0">
+                      {[2, 1].map((layer) => (
+                        <div
+                          key={layer}
+                          className="absolute inset-0 rounded-xl border bg-black/30"
+                          style={{
+                            transform: `translate(${layer * 8}px, ${layer * 8}px)`,
+                            opacity: 0.45,
+                          }}
+                        />
+                      ))}
+
+                      <Skeleton className="absolute inset-0 rounded-xl" />
+                    </div>
+
+                    {/* Meta skeleton */}
+                    <div className="min-w-0 ml-4 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-56" />
+
+                      <div className="flex gap-2 pt-1">
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right actions skeleton */}
+                  <div className="flex items-center gap-2 justify-end">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <Skeleton className="h-9 w-24 rounded-xl" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : !sorted.length ? (
         <div className="rounded-2xl border bg-muted/20 p-10 text-center">
           <p className="text-lg font-medium">No conversations yet</p>
           <p className="text-sm text-muted-foreground mt-2">
@@ -272,7 +313,7 @@ export default function ConversationsPage() {
 
           {/* Preview dialog */}
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-6xl p-0 overflow-hidden">
+            <DialogContent className="p-0 overflow-hidden w-[92vw] max-w-6xl max-h-[90vh] sm:w-auto rounded-2xl sm:rounded-3xl">
               <DialogHeader className="px-5 py-4 backdrop-blur-xl border-b border-white/10 relative overflow-hidden">
                 <div className="pointer-events-none absolute inset-0 primary-gradient opacity-20 blur-3xl" />
                 <DialogTitle className="relative text-lg text-white">
@@ -281,7 +322,7 @@ export default function ConversationsPage() {
               </DialogHeader>
 
               {previewSnapshot && (
-                <div className="grid grid-cols-1 md:grid-cols-7">
+                <div className="grid grid-cols-1 md:grid-cols-7 overflow-y-auto max-h-[calc(90vh-64px)]">
                   {/* Main image */}
                   <div className="md:col-span-4 relative h-[72vh] ">
                     {/* soft vignette */}
@@ -438,7 +479,7 @@ export default function ConversationsPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-8">
                       <Button
                         className="w-full"
                         onClick={() => {

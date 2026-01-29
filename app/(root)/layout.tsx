@@ -12,7 +12,7 @@ const RootLayout = async ({ children }: { children: ReactNode }) => {
     <main className="bg-zinc-950 h-screen relative">
       <Navbar />
 
-      <section className="flex min-h-screen flex-1 flex-col px-6 pb-6 pt-36 max-md:pb-14 sm:px-14">
+      <section className="flex min-h-screen flex-1 flex-col px-6 pb-6 pt-16 sm:pt-36 max-md:pb-14 sm:px-14">
         <div className="mx-auto w-full max-w-7xl">{children}</div>
       </section>
     </main>
