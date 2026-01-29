@@ -267,7 +267,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Button
               className="primary-gradient text-white border-0 hover:opacity-95"
               onClick={() => (window.location.href = "/photos")}
@@ -289,7 +289,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* STATS ROW (moved up) */}
+      {/* STATS ROW */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatTile label="Photos uploaded" value={`${photoCount}`} icon={<IconPhoto className="h-5 w-5" />} />
         <StatTile label="Conversations uploaded" value={`${convoCount}`} icon={<IconMessageCircle2 className="h-5 w-5" />} />
@@ -412,11 +412,11 @@ export default function DashboardPage() {
 /* ------------------------------ UI pieces ------------------------------ */
 
 function StatTile({
-                    label,
-                    value,
-                    icon,
-                    valueClassName,
-                  }: {
+  label,
+  value,
+  icon,
+  valueClassName,
+}: {
   label: string;
   value: string;
   icon: React.ReactNode;
@@ -440,12 +440,12 @@ function StatTile({
 }
 
 function ActionCard({
-                      title,
-                      description,
-                      cta,
-                      href,
-                      icon,
-                    }: {
+  title,
+  description,
+  cta,
+  href,
+  icon,
+}: {
   title: string;
   description: string;
   cta: string;
@@ -483,14 +483,14 @@ function ActionCard({
 }
 
 function RecentCard({
-                      kind,
-                      thumbnailUrl,
-                      title,
-                      subtitle,
-                      chips,
-                      primaryCta,
-                      secondaryCta,
-                    }: {
+  kind,
+  thumbnailUrl,
+  title,
+  subtitle,
+  chips,
+  primaryCta,
+  secondaryCta,
+}: {
   kind: string;
   thumbnailUrl?: string | null;
   title: string;
@@ -506,7 +506,7 @@ function RecentCard({
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden">
-      <div className="p-5 flex items-center gap-4">
+      <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-black shrink-0">
           {thumbnailUrl ? (
             <Image src={thumbnailUrl} alt="thumb" fill className="object-cover" sizes="80px" />
@@ -563,10 +563,10 @@ function RecentCard({
 }
 
 function OneScreenCta({
-                        latestPhoto,
-                        latestConvo,
-                        latestProfile,
-                      }: {
+  latestPhoto,
+  latestConvo,
+  latestProfile,
+}: {
   latestPhoto: MediaAssetLike | null;
   latestConvo: ConversationSnapshotLike | null;
   latestProfile: ProfileLike | null;
