@@ -2,11 +2,9 @@ import React from "react";
 import {
   IconPhoto,
   IconMessageCircle2,
-  IconIdBadge2,
   IconSparkles,
   IconCheck,
   IconArrowRight,
-  IconClock,
   IconInfoCircle,
   IconLayersSubtract,
 } from "@tabler/icons-react";
@@ -26,13 +24,13 @@ type ToolCardProps = {
 };
 
 function ToolCard({
-                    title,
-                    description,
-                    icon,
-                    chip,
-                    children,
-                    accent = "pink",
-                  }: ToolCardProps) {
+  title,
+  description,
+  icon,
+  chip,
+  children,
+  accent = "pink",
+}: ToolCardProps) {
   const accentClasses = {
     pink: {
       glow: "from-[#ff46c5]/25 via-[#ff46c5]/10 to-transparent",
@@ -57,16 +55,15 @@ function ToolCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6",
+        "group relative overflow-hidden rounded-2xl border border-white/10 bg-white/3 p-6",
         "shadow-[0_0_0_1px_rgba(255,255,255,0.03)]",
-        "transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.05]",
+        "transition-all duration-300 hover:-translate-y-1 hover:bg-white/5",
         accentClasses.border
       )}
     >
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100",
-          "bg-gradient-to-br",
+          "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-linear-to-br",
           accentClasses.glow
         )}
       />
@@ -75,7 +72,7 @@ function ToolCard({
       <div className="relative flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] ring-1 ring-white/10">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/4 ring-1 ring-white/10">
               <div className={cn("h-6 w-6", accentClasses.icon)}>{icon}</div>
             </div>
 
@@ -108,7 +105,7 @@ function ToolCard({
         </div>
 
         <div className="relative">
-          <div className="mb-4 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <div className="mb-4 h-px w-full bg-linear-to-r from-transparent via-white/10 to-transparent" />
           {children}
         </div>
       </div>
@@ -117,18 +114,18 @@ function ToolCard({
 }
 
 function SectionCard({
-                       title,
-                       subtitle,
-                       icon,
-                       children,
-                     }: {
+  title,
+  subtitle,
+  icon,
+  children,
+}: {
   title: string;
   subtitle?: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/3 p-6">
       <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-[120%] -translate-x-1/2 rounded-full bg-white/5 blur-2xl" />
       <div className="relative flex flex-col gap-4">
         <div>
@@ -148,8 +145,8 @@ function SectionCard({
 
 function BulletRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.05] ring-1 ring-white/10">
+    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/2 p-3">
+      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
         <IconCheck className="h-4 w-4 text-zinc-200" />
       </div>
       <div className="text-sm text-zinc-300">{children}</div>
@@ -158,22 +155,15 @@ function BulletRow({ children }: { children: React.ReactNode }) {
 }
 
 export default function AIReview() {
-  // optional: replace later with real recent data
-  const recent = {
-    photo: null as null | { label: string; when: string },
-    profile: null as null | { label: string; when: string },
-    conversation: null as null | { label: string; when: string },
-  };
-
   return (
-    <section className="w-full">
+    <main className="max-w-7xl mx-auto px-6 py-10 space-y-6">
       {/* Header */}
-      <div className="mb-10 flex flex-col gap-3">
+      <section className="mb-10 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-4xl font-semibold tracking-tight primary-text-gradient">
             AI Review
           </h1>
-          <span className="inline-flex items-center rounded-full bg-white/[0.04] px-3 py-1 text-xs text-zinc-300 ring-1 ring-white/10">
+          <span className="inline-flex items-center rounded-full bg-white/4 px-3 py-1 text-xs text-zinc-300 ring-1 ring-white/10">
             Tools
           </span>
         </div>
@@ -181,7 +171,7 @@ export default function AIReview() {
           Analyze a single photo, your full profile photo set, or a conversation
           thread—then iterate with clear next steps.
         </p>
-      </div>
+      </section>
 
       {/* Top row: Photos → Profiles → Conversations */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -217,7 +207,7 @@ export default function AIReview() {
       </div>
 
       {/* Bottom half */}
-      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left column */}
         <div className="lg:col-span-7 flex flex-col gap-6">
           <SectionCard
@@ -250,7 +240,7 @@ export default function AIReview() {
             icon={<IconInfoCircle className="h-4 w-4" />}
           >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">Photos</p>
                 <p className="mt-1 text-sm text-zinc-400">
                   “Is this a strong photo?” — lighting, framing, expression,
@@ -258,15 +248,15 @@ export default function AIReview() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">Profiles</p>
                 <p className="mt-1 text-sm text-zinc-400">
                   “Does this set tell a story?” — variety, balance, consistency,
-                  and perceived lifestyle.
+                  and lifestyle.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:col-span-2">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4 sm:col-span-2">
                 <p className="text-sm font-semibold text-white">Conversations</p>
                 <p className="mt-1 text-sm text-zinc-400">
                   “What’s the dynamic?” — momentum, interest level, texting
@@ -285,7 +275,7 @@ export default function AIReview() {
             icon={<IconInfoCircle className="h-4 w-4" />}
           >
             <div className="space-y-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">
                   Does this store my photos?
                 </p>
@@ -295,7 +285,7 @@ export default function AIReview() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">
                   Why do Photos and Profiles both exist?
                 </p>
@@ -305,7 +295,7 @@ export default function AIReview() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">
                   What should I run first?
                 </p>
@@ -315,7 +305,7 @@ export default function AIReview() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">
                   Can I re-run after changes?
                 </p>
@@ -327,6 +317,6 @@ export default function AIReview() {
           </SectionCard>
         </div>
       </div>
-    </section>
+    </main>
   );
 }
