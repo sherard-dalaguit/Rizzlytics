@@ -1,16 +1,17 @@
 "use client";
 
-import React, {useEffect, useMemo, useState} from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import {Button} from "@/components/ui/button";
-import {cn, formatDate, shortId} from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { cn, formatDate, shortId } from "@/lib/utils";
 import {
   IconArrowRight,
   IconBrain,
   IconMessageCircle2,
   IconPhoto,
   IconSparkles,
-  IconTrendingUp, IconUser,
+  IconTrendingUp,
+  IconUser,
 } from "@tabler/icons-react";
 
 type MediaAssetLike = {
@@ -23,8 +24,8 @@ type MediaAssetLike = {
 type ConversationSnapshotLike = {
   _id: any;
   createdAt?: string | Date;
-  threadScreenshotAssetIds?: any[]; // may be populated docs or ids
-  otherProfileAssetIds?: any[]; // may be populated docs or ids
+  threadScreenshotAssetIds?: any[];
+  otherProfileAssetIds?: any[];
   contextInput?: string;
   analysisId?: any;
 };
@@ -32,7 +33,7 @@ type ConversationSnapshotLike = {
 type ProfileLike = {
   _id: any;
   createdAt?: string | Date;
-  myProfileAssetIds?: any[]; // populated docs or ids
+  myProfileAssetIds?: any[];
   contextInput?: string;
   analysisId?: any;
 };
@@ -43,6 +44,14 @@ function safeTime(value: any): number {
   return Number.isFinite(t) ? t : 0;
 }
 
+function resolveFirstThumb(convo: ConversationSnapshotLike | null): string | null {
+  if (!convo) return null;
+  const first = Array.isArray(convo.threadScreenshotAssetIds) ? convo.threadScreenshotAssetIds[0] : null;
+  if (!first) return null;
+  if (typeof first === "object" && (first as any).blobUrl) return (first as any).blobUrl;
+  return null;
+}
+
 function resolveFirstProfileThumb(profile: ProfileLike | null): string | null {
   if (!profile) return null;
   const first = Array.isArray(profile.myProfileAssetIds) ? profile.myProfileAssetIds[0] : null;
@@ -51,6 +60,10 @@ function resolveFirstProfileThumb(profile: ProfileLike | null): string | null {
   return null;
 }
 
+function countAssetIds(list: any[] | undefined): number {
+  if (!Array.isArray(list)) return 0;
+  return list.length;
+}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -78,7 +91,7 @@ export default function DashboardPage() {
           const data = await convosRes.json();
           setConvos(data.conversationSnapshots ?? []);
         } else {
-          console.error("Failed to fetch /api/conversation-snapshots");
+          console.error("Failed to fetch /api/conversations");
         }
 
         if (profilesRes.ok) {
@@ -97,17 +110,9 @@ export default function DashboardPage() {
     run();
   }, []);
 
-  const sortedPhotos = useMemo(() => {
-    return [...photos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
-  }, [photos]);
-
-  const sortedConvos = useMemo(() => {
-    return [...convos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
-  }, [convos]);
-
-  const sortedProfiles = useMemo(() => {
-    return [...profiles].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
-  }, [profiles]);
+  const sortedPhotos = useMemo(() => [...photos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)), [photos]);
+  const sortedConvos = useMemo(() => [...convos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)), [convos]);
+  const sortedProfiles = useMemo(() => [...profiles].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)), [profiles]);
 
   const latestPhoto = sortedPhotos[0] ?? null;
   const latestConvo = sortedConvos[0] ?? null;
@@ -117,14 +122,13 @@ export default function DashboardPage() {
   const convoCount = sortedConvos.length;
   const profileCount = sortedProfiles.length;
 
-  const convWithContext = useMemo(() => {
-    return sortedConvos.filter((c) => Boolean(c.contextInput?.trim())).length;
-  }, [sortedConvos]);
+  const convWithContext = useMemo(() => sortedConvos.filter((c) => Boolean(c.contextInput?.trim())).length, [sortedConvos]);
 
   const lastUploadAt = useMemo(() => {
     const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
     const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-    return Math.max(photoT, convoT);
+    const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
+    return Math.max(photoT, convoT, profileT);
   }, [latestPhoto, latestConvo, latestProfile]);
 
   const lastUploadLabel = useMemo(() => {
@@ -132,7 +136,13 @@ export default function DashboardPage() {
     return formatDate(new Date(lastUploadAt));
   }, [lastUploadAt]);
 
-  // “Next steps” suggestions (simple + defensible)
+  const snapshotLabel =
+    photoCount === 0 && convoCount === 0 && profileCount === 0
+      ? "No uploads yet"
+      : `Snapshot • ${photoCount} photo${photoCount === 1 ? "" : "s"} • ${profileCount} profile${
+        profileCount === 1 ? "" : "s"
+      } • ${convoCount} conversation${convoCount === 1 ? "" : "s"}`;
+
   const nextSteps = useMemo(() => {
     const steps: Array<{
       title: string;
@@ -142,8 +152,7 @@ export default function DashboardPage() {
       icon: React.ReactNode;
     }> = [];
 
-    // If no uploads
-    if (photoCount === 0 && convoCount === 0) {
+    if (photoCount === 0 && convoCount === 0 && profileCount === 0) {
       steps.push({
         title: "Upload your first photo",
         description: "Start with 3–5 photos so the AI has signal to compare.",
@@ -161,76 +170,44 @@ export default function DashboardPage() {
       return steps;
     }
 
-    // If only photos
-    if (photoCount > 0 && convoCount === 0) {
-      steps.push({
-        title: "Run a conversation analysis",
-        description: "Photos are your hook — convos are how you convert.",
-        cta: "Upload conversation",
-        href: "/conversations",
-        icon: <IconMessageCircle2 className="h-5 w-5" />,
-      });
-      steps.push({
-        title: "Iterate one photo",
-        description: "Swap your weakest photo for a cleaner, brighter, higher-signal shot.",
-        cta: "Review photos",
-        href: "/photos",
-        icon: <IconSparkles className="h-5 w-5" />,
-      });
-      return steps;
-    }
-
-    // If only conversations
-    if (photoCount === 0 && convoCount > 0) {
-      steps.push({
-        title: "Upload a photo set",
-        description: "A strong stack raises match quality before the first message.",
-        cta: "Upload photos",
-        href: "/photos",
-        icon: <IconPhoto className="h-5 w-5" />,
-      });
-      steps.push({
-        title: "Rewrite your last thread",
-        description: "Open the last AI review and rewrite the next 3 messages using the pattern.",
-        cta: "Open AI Review",
-        href: latestConvo?.analysisId ? `/ai-review/${latestConvo.analysisId}` : "/ai-review",
-        icon: <IconBrain className="h-5 w-5" />,
-      });
-      return steps;
-    }
-
     if (photoCount > 0 && profileCount === 0) {
       steps.push({
         title: "Create a profile set",
-        description: "Bundle your best photos into one profile analysis (this is what you’ll actually use).",
+        description: "Bundle your best photos into a profile analysis (this is what you’ll actually use).",
         cta: "Go to Profiles",
         href: "/profiles",
-        icon: <IconPhoto className="h-5 w-5" />,
+        icon: <IconUser className="h-5 w-5" />,
       });
-      return steps;
     }
 
-    // Both exist
     steps.push({
       title: "Improve one thing today",
       description: "Pick ONE: swap a photo or rewrite ONE conversation segment. Small iterations compound.",
       cta: "Open AI Review",
       href: (() => {
-        // choose most recent analysis between latest photo + latest convo
         const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
         const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-        return photoT >= convoT
-          ? latestPhoto?.analysisId
-            ? `/ai-review/${latestPhoto.analysisId}`
-            : "/ai-review"
-          : latestConvo?.analysisId
-            ? `/ai-review/${latestConvo.analysisId}`
-            : "/ai-review";
+        const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
+
+        const best =
+          photoT >= convoT && photoT >= profileT
+            ? latestPhoto?.analysisId
+              ? `/ai-review/${latestPhoto.analysisId}`
+              : "/ai-review"
+            : convoT >= photoT && convoT >= profileT
+              ? latestConvo?.analysisId
+                ? `/ai-review/${latestConvo.analysisId}`
+                : "/ai-review"
+              : latestProfile?.analysisId
+                ? `/ai-review/${latestProfile.analysisId}`
+                : "/ai-review";
+
+        return best;
       })(),
       icon: <IconBrain className="h-5 w-5" />,
     });
 
-    if (convWithContext < convoCount) {
+    if (convoCount > 0 && convWithContext < convoCount) {
       steps.push({
         title: "Add context to older convos",
         description: "A single line of context can turn generic advice into exact rewrites.",
@@ -248,8 +225,9 @@ export default function DashboardPage() {
       });
     }
 
+    // show just 2 cards to keep it tight
     return steps.slice(0, 2);
-  }, [photoCount, convoCount, latestPhoto, latestConvo, convWithContext]);
+  }, [photoCount, convoCount, profileCount, latestPhoto, latestConvo, latestProfile, convWithContext]);
 
   if (loading) {
     return (
@@ -259,26 +237,16 @@ export default function DashboardPage() {
     );
   }
 
-  const snapshotLabel =
-    photoCount === 0 && convoCount === 0 && profileCount === 0
-      ? "No uploads yet"
-      : `Snapshot • ${photoCount} photo${photoCount === 1 ? "" : "s"} • ${profileCount} profile${
-        profileCount === 1 ? "" : "s"
-      } • ${convoCount} conversation${convoCount === 1 ? "" : "s"}`;
-
   return (
-    <main className="max-w-352 mx-auto px-6 py-10 space-y-10">
+    <main className="max-w-352 mx-auto px-6 py-10 space-y-8">
       {/* Header */}
       <section className="space-y-1">
-        <h1 className="text-4xl primary-text-gradient font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Your next best moves, based on what you’ve uploaded so far.
-        </p>
+        <h1 className="inline-block text-4xl font-semibold text-transparent bg-clip-text primary-text-gradient">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">Your next best moves, based on what you’ve uploaded so far.</p>
       </section>
 
       {/* Hero */}
       <section className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden relative">
-        {/* ambient gradient */}
         <div className="pointer-events-none absolute inset-0 primary-gradient opacity-15 blur-3xl" />
 
         <div className="relative p-6 md:p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
@@ -289,12 +257,12 @@ export default function DashboardPage() {
             </p>
 
             <h2 className="text-2xl md:text-3xl font-semibold text-white">
-              {photoCount + convoCount === 0 ? "Start your first analysis" : "You’re fully analyzed — now iterate"}
+              {photoCount + convoCount + profileCount === 0 ? "Start your first analysis" : "You’re fully analyzed — now iterate"}
             </h2>
 
             <p className="text-sm text-white/70 max-w-2xl">
-              {photoCount + convoCount === 0
-                ? "Upload a photo or conversation to get a high-signal diagnostic and action plan."
+              {photoCount + convoCount + profileCount === 0
+                ? "Upload a photo, create a profile, or add a conversation to get a high-signal diagnostic and action plan."
                 : "Use the action cards below to fix the highest-impact issues first. One clean change per day beats random changes."}
             </p>
           </div>
@@ -321,9 +289,22 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Main grid */}
+      {/* STATS ROW (moved up) */}
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatTile label="Photos uploaded" value={`${photoCount}`} icon={<IconPhoto className="h-5 w-5" />} />
+        <StatTile label="Conversations uploaded" value={`${convoCount}`} icon={<IconMessageCircle2 className="h-5 w-5" />} />
+        <StatTile label="Profiles created" value={`${profileCount}`} icon={<IconUser className="h-5 w-5" />} />
+        <StatTile
+          label="Last upload"
+          value={lastUploadLabel}
+          icon={<IconTrendingUp className="h-5 w-5" />}
+          valueClassName="text-sm font-semibold text-white"
+        />
+      </section>
+
+      {/* MAIN GRID: Next steps (+ CTA under it) | Recent activity */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Next steps */}
+        {/* Left: Next steps + one-screen plan (stacked) */}
         <div className="lg:col-span-7 space-y-4">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-white">Next steps</p>
@@ -332,19 +313,19 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {nextSteps.map((s) => (
-              <ActionCard
-                key={s.title}
-                title={s.title}
-                description={s.description}
-                cta={s.cta}
-                href={s.href}
-                icon={s.icon}
-              />
+              <ActionCard key={s.title} title={s.title} description={s.description} cta={s.cta} href={s.href} icon={s.icon} />
             ))}
           </div>
+
+          {/* One-screen CTA (moved under next steps, not full-width row) */}
+          <OneScreenCta
+            latestPhoto={latestPhoto}
+            latestConvo={latestConvo}
+            latestProfile={latestProfile}
+          />
         </div>
 
-        {/* Recent activity */}
+        {/* Right: Recent activity */}
         <div className="lg:col-span-5 space-y-4">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-white">Recent activity</p>
@@ -357,10 +338,7 @@ export default function DashboardPage() {
               thumbnailUrl={latestPhoto?.blobUrl}
               title={latestPhoto ? `Photo • ${shortId(latestPhoto._id?.toString?.() ?? String(latestPhoto._id))}` : "No photos yet"}
               subtitle={latestPhoto?.createdAt ? `Uploaded ${formatDate(latestPhoto.createdAt)}` : "Upload a photo to get started."}
-              primaryCta={{
-                label: "View",
-                onClick: () => (window.location.href = "/photos"),
-              }}
+              primaryCta={{ label: "View", onClick: () => (window.location.href = "/photos") }}
               secondaryCta={
                 latestPhoto?.analysisId
                   ? {
@@ -377,15 +355,9 @@ export default function DashboardPage() {
               kind="Latest conversation"
               thumbnailUrl={resolveFirstThumb(latestConvo)}
               title={
-                latestConvo
-                  ? `Conversation • ${shortId(latestConvo._id?.toString?.() ?? String(latestConvo._id))}`
-                  : "No conversations yet"
+                latestConvo ? `Conversation • ${shortId(latestConvo._id?.toString?.() ?? String(latestConvo._id))}` : "No conversations yet"
               }
-              subtitle={
-                latestConvo?.createdAt
-                  ? `Uploaded ${formatDate(latestConvo.createdAt)}`
-                  : "Upload a conversation to get started."
-              }
+              subtitle={latestConvo?.createdAt ? `Uploaded ${formatDate(latestConvo.createdAt)}` : "Upload a conversation to get started."}
               chips={
                 latestConvo
                   ? [
@@ -395,10 +367,7 @@ export default function DashboardPage() {
                   ]
                   : []
               }
-              primaryCta={{
-                label: "View",
-                onClick: () => (window.location.href = "/conversations"),
-              }}
+              primaryCta={{ label: "View", onClick: () => (window.location.href = "/conversations") }}
               secondaryCta={
                 latestConvo?.analysisId
                   ? {
@@ -414,28 +383,14 @@ export default function DashboardPage() {
             <RecentCard
               kind="Latest profile"
               thumbnailUrl={resolveFirstProfileThumb(latestProfile)}
-              title={
-                latestProfile
-                  ? `Profile • ${shortId(latestProfile._id?.toString?.() ?? String(latestProfile._id))}`
-                  : "No profiles yet"
-              }
-              subtitle={
-                latestProfile?.createdAt
-                  ? `Uploaded ${formatDate(latestProfile.createdAt)}`
-                  : "Create a profile set to get started."
-              }
+              title={latestProfile ? `Profile • ${shortId(latestProfile._id?.toString?.() ?? String(latestProfile._id))}` : "No profiles yet"}
+              subtitle={latestProfile?.createdAt ? `Uploaded ${formatDate(latestProfile.createdAt)}` : "Create a profile set to get started."}
               chips={
                 latestProfile
-                  ? [
-                    `Photos: ${countAssetIds(latestProfile.myProfileAssetIds)}`,
-                    latestProfile.contextInput?.trim() ? "Has context" : "No context",
-                  ]
+                  ? [`Photos: ${countAssetIds(latestProfile.myProfileAssetIds)}`, latestProfile.contextInput?.trim() ? "Has context" : "No context"]
                   : []
               }
-              primaryCta={{
-                label: "View",
-                onClick: () => (window.location.href = "/profiles"),
-              }}
+              primaryCta={{ label: "View", onClick: () => (window.location.href = "/profiles") }}
               secondaryCta={
                 latestProfile?.analysisId
                   ? {
@@ -450,62 +405,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
-
-      {/* Stats row */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatTile
-          label="Photos uploaded"
-          value={`${photoCount}`}
-          icon={<IconPhoto className="h-5 w-5" />}
-        />
-        <StatTile
-          label="Conversations uploaded"
-          value={`${convoCount}`}
-          icon={<IconMessageCircle2 className="h-5 w-5" />}
-        />
-        <StatTile
-          label="Profiles created"
-          value={`${profileCount}`}
-          icon={<IconUser className="h-5 w-5" />}
-        />
-        <StatTile
-          label="Last upload"
-          value={lastUploadLabel}
-          icon={<IconTrendingUp className="h-5 w-5" />}
-          valueClassName="text-sm font-semibold text-white"
-        />
-      </section>
-
-      {/* One-screen CTA */}
-      <section className="rounded-2xl border border-white/10 bg-muted/10 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-white">Want a clean “one-screen” AI plan?</p>
-          <p className="text-xs text-muted-foreground">
-            Open your latest AI review and implement one change today (photo swap or message rewrite).
-          </p>
-        </div>
-
-        <Button
-          className="primary-gradient text-white border-0 hover:opacity-95"
-          onClick={() => {
-            // pick most recent analysis between photo + convo
-            const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
-            const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-
-            window.location.href = photoT >= convoT
-              ? latestPhoto?.analysisId
-                ? `/ai-review/${latestPhoto.analysisId}`
-                : "/ai-review"
-              : latestConvo?.analysisId
-                ? `/ai-review/${latestConvo.analysisId}`
-                : "/ai-review";
-          }}
-          type="button"
-        >
-          <IconBrain className="h-5 w-5 mr-2" />
-          Open AI Review
-        </Button>
-      </section>
     </main>
   );
 }
@@ -513,11 +412,11 @@ export default function DashboardPage() {
 /* ------------------------------ UI pieces ------------------------------ */
 
 function StatTile({
-  label,
-  value,
-  icon,
-  valueClassName,
-}: {
+                    label,
+                    value,
+                    icon,
+                    valueClassName,
+                  }: {
   label: string;
   value: string;
   icon: React.ReactNode;
@@ -541,12 +440,12 @@ function StatTile({
 }
 
 function ActionCard({
-  title,
-  description,
-  cta,
-  href,
-  icon,
-}: {
+                      title,
+                      description,
+                      cta,
+                      href,
+                      icon,
+                    }: {
   title: string;
   description: string;
   cta: string;
@@ -584,14 +483,14 @@ function ActionCard({
 }
 
 function RecentCard({
-  kind,
-  thumbnailUrl,
-  title,
-  subtitle,
-  chips,
-  primaryCta,
-  secondaryCta,
-}: {
+                      kind,
+                      thumbnailUrl,
+                      title,
+                      subtitle,
+                      chips,
+                      primaryCta,
+                      secondaryCta,
+                    }: {
   kind: string;
   thumbnailUrl?: string | null;
   title: string;
@@ -639,11 +538,7 @@ function RecentCard({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            className="bg-white/5 border border-white/10 text-white hover:bg-white/10"
-            onClick={primaryCta.onClick}
-            type="button"
-          >
+          <Button className="bg-white/5 border border-white/10 text-white hover:bg-white/10" onClick={primaryCta.onClick} type="button">
             {primaryCta.label}
           </Button>
 
@@ -667,21 +562,53 @@ function RecentCard({
   );
 }
 
-/* ------------------------------ Helpers ------------------------------ */
+function OneScreenCta({
+                        latestPhoto,
+                        latestConvo,
+                        latestProfile,
+                      }: {
+  latestPhoto: MediaAssetLike | null;
+  latestConvo: ConversationSnapshotLike | null;
+  latestProfile: ProfileLike | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-muted/10 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 primary-gradient opacity-10 blur-3xl" />
 
-function countAssetIds(list: any[] | undefined): number {
-  if (!Array.isArray(list)) return 0;
-  return list.length;
-}
+      <div className="relative space-y-1">
+        <p className="text-sm font-semibold text-white">Want a clean “one-screen” AI plan?</p>
+        <p className="text-xs text-muted-foreground">
+          Open your latest AI review and implement one change today (photo swap or message rewrite).
+        </p>
+      </div>
 
-function resolveFirstThumb(convo: ConversationSnapshotLike | null): string | null {
-  if (!convo) return null;
+      <Button
+        className="primary-gradient text-white border-0 hover:opacity-95 relative"
+        onClick={() => {
+          const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
+          const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
+          const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
 
-  const first = Array.isArray(convo.threadScreenshotAssetIds) ? convo.threadScreenshotAssetIds[0] : null;
+          const target =
+            photoT >= convoT && photoT >= profileT
+              ? latestPhoto?.analysisId
+                ? `/ai-review/${latestPhoto.analysisId}`
+                : "/ai-review"
+              : convoT >= photoT && convoT >= profileT
+                ? latestConvo?.analysisId
+                  ? `/ai-review/${latestConvo.analysisId}`
+                  : "/ai-review"
+                : latestProfile?.analysisId
+                  ? `/ai-review/${latestProfile.analysisId}`
+                  : "/ai-review";
 
-  // could be populated doc: { blobUrl }, or raw ObjectId string
-  if (!first) return null;
-  if (typeof first === "object" && (first as any).blobUrl) return (first as any).blobUrl;
-
-  return null;
+          window.location.href = target;
+        }}
+        type="button"
+      >
+        <IconBrain className="h-5 w-5 mr-2" />
+        Open AI Review
+      </Button>
+    </div>
+  );
 }
