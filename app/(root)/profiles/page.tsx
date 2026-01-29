@@ -162,7 +162,7 @@ export default function ProfilesPage() {
                   key={id}
                   className="group rounded-2xl border bg-muted/10 overflow-hidden hover:bg-muted/15 transition"
                 >
-                  <div className="p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center md:justify-between items-stretch">
+                  <div className="p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
                     {/* Left: stacked preview */}
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="relative w-40 h-30 shrink-0">
@@ -203,7 +203,7 @@ export default function ProfilesPage() {
                       {/* Meta */}
                       <div className="min-w-0 ml-4 space-y-1">
                         <p className="text-white font-medium leading-snug truncate">{label}</p>
-                        <p className="hidden sm:block text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Uploaded {uploaded} • ID {shortId(id)}
                         </p>
 
@@ -215,38 +215,29 @@ export default function ProfilesPage() {
                     </div>
 
                     {/* Right: actions */}
-                    <div className="flex flex-col gap-3 w-full md:w-auto">
-                      {/* top row */}
-                      <div className="flex items-start justify-between md:justify-end gap-2">
-                        {/* keep some empty space on desktop so it doesn't clash with meta */}
-                        <div className="md:hidden" />
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                            onClick={() => openPreview(profile)}
-                            type="button"
-                          >
-                            <IconMaximize className="h-5 w-5" />
-                          </Button>
-
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                            onClick={() => handleDelete(id)}
-                            type="button"
-                          >
-                            <IconTrash className="h-5 w-5" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* primary CTA */}
+                    <div className="flex items-center gap-2 justify-end">
                       <Button
-                        className="w-full md:w-auto primary-gradient text-white border-0 hover:opacity-95 disabled:opacity-60"
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
+                        onClick={() => openPreview(profile)}
+                        type="button"
+                      >
+                        <IconMaximize className="h-5 w-5" />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
+                        onClick={() => handleDelete(id)}
+                        type="button"
+                      >
+                        <IconTrash className="h-5 w-5" />
+                      </Button>
+
+                      <Button
+                        className="primary-gradient text-white border-0 hover:opacity-95 disabled:opacity-60"
                         disabled={!analysisId}
                         onClick={() => {
                           if (!analysisId) return;
