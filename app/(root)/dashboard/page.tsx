@@ -13,6 +13,7 @@ import {
   IconTrendingUp,
   IconUser,
 } from "@tabler/icons-react";
+import {Skeleton} from "@/components/ui/skeleton";
 
 type MediaAssetLike = {
   _id: any;
@@ -231,8 +232,139 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="max-w-352 mx-auto px-6 py-10">
-        <p className="text-muted-foreground">Loading dashboard…</p>
+      <main className="max-w-352 mx-auto px-6 py-10 space-y-8">
+        {/* Header */}
+        <section className="space-y-1">
+          <h1 className="inline-block text-4xl font-semibold text-transparent bg-clip-text primary-text-gradient">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Your next best moves, based on what you’ve uploaded so far.</p>
+        </section>
+
+        {/* Hero */}
+        <section className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden relative">
+          <div className="relative p-6 md:p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-3 w-72" />
+              </div>
+
+              <Skeleton className="h-8 w-[520px] max-w-full" />
+
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[620px] max-w-full" />
+                <Skeleton className="h-4 w-[560px] max-w-full" />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <Skeleton className="h-10 w-32 rounded-xl" />
+              <Skeleton className="h-10 w-40 rounded-xl" />
+            </div>
+          </div>
+        </section>
+
+        {/* STATS ROW */}
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="relative rounded-2xl border border-white/10 bg-muted/10 overflow-hidden"
+            >
+              <div className="relative p-5 flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-7 w-20" />
+                </div>
+
+                <Skeleton className="h-10 w-10 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* MAIN GRID */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-60" />
+            </div>
+
+            {/* Next steps cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-white/10 bg-muted/10 p-5 relative overflow-hidden"
+                >
+                  <div className="relative space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-xl" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Skeleton className="h-3 w-[260px] max-w-full" />
+                      <Skeleton className="h-3 w-[220px] max-w-full" />
+                    </div>
+
+                    <Skeleton className="h-9 w-36 rounded-xl" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* One-screen CTA */}
+            <div className="rounded-2xl border border-white/10 bg-muted/10 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative overflow-hidden">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-56" />
+                <Skeleton className="h-3 w-[420px] max-w-full" />
+              </div>
+
+              <Skeleton className="h-10 w-44 rounded-xl" />
+            </div>
+          </div>
+
+          {/* Right */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden"
+                >
+                  <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                    <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
+
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-4 w-[260px] max-w-full" />
+                      <Skeleton className="h-3 w-[220px] max-w-full" />
+
+                      {/* chips row (optional, like convo/profile cards) */}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                        <Skeleton className="h-5 w-24 rounded-full" />
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-9 w-20 rounded-xl" />
+                      <Skeleton className="h-9 w-24 rounded-xl" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
     );
   }
