@@ -272,7 +272,7 @@ export default function ConversationsPage() {
 
           {/* Preview dialog */}
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-6xl p-0 overflow-hidden">
+            <DialogContent className="p-0 overflow-hidden w-[92vw] max-w-6xl max-h-[90vh] sm:w-auto rounded-2xl sm:rounded-3xl">
               <DialogHeader className="px-5 py-4 backdrop-blur-xl border-b border-white/10 relative overflow-hidden">
                 <div className="pointer-events-none absolute inset-0 primary-gradient opacity-20 blur-3xl" />
                 <DialogTitle className="relative text-lg text-white">
@@ -281,7 +281,7 @@ export default function ConversationsPage() {
               </DialogHeader>
 
               {previewSnapshot && (
-                <div className="grid grid-cols-1 md:grid-cols-7">
+                <div className="grid grid-cols-1 md:grid-cols-7 overflow-y-auto max-h-[calc(90vh-64px)]">
                   {/* Main image */}
                   <div className="md:col-span-4 relative h-[72vh] ">
                     {/* soft vignette */}
@@ -438,7 +438,7 @@ export default function ConversationsPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-8">
                       <Button
                         className="w-full"
                         onClick={() => {
