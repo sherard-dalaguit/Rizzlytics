@@ -9,9 +9,13 @@ import { IconMenu2 } from "@tabler/icons-react"
 import Link from "next/link";
 import NavLinks from "@/components/navigation/NavLinks";
 import {Button} from "@/components/ui/button";
-import ROUTES from "@/constants/routes";
+import {auth, signOut} from "@/auth";
+import {LogOut} from "lucide-react";
 
-const MobileNavigation = () => {
+const MobileNavigation = async () => {
+  const session = await auth();
+  const userId = session?.user?.id;
+
   return (
     <Sheet>
       <SheetTrigger>
@@ -34,21 +38,27 @@ const MobileNavigation = () => {
         </div>
 
         <div className="flex flex-col mt-auto mb-4 gap-3">
-          <SheetClose asChild>
-            <Link href={ROUTES.SIGN_IN}>
-              <Button className="text-lg text-white primary-gradient min-h-[50px] w-full rounded-lg px-4 py-3">
-                Log In
-              </Button>
-            </Link>
-          </SheetClose>
-
-          <SheetClose asChild>
-            <Link href={ROUTES.SIGN_UP}>
-              <Button className="text-lg text-white bg-[#1f1137] min-h-[50px] w-full rounded-lg border px-4 py-3">
-                Sign Up
-              </Button>
-            </Link>
-          </SheetClose>
+          {userId ? (
+            <SheetClose asChild>
+              <form action={async () => {
+                "use server";
+                await signOut();
+              }}>
+                <Button type="submit" className="w-fit bg-transparent! px-4 py-3">
+                  <LogOut className="size-5 text-white" />
+                  <span className="primary-text-gradient">Log Out</span>
+                </Button>
+              </form>
+            </SheetClose>
+          ) : (
+            <SheetClose asChild>
+              <Link href="/log-in">
+                <Button className="text-lg text-white primary-gradient min-h-12.5 w-full rounded-lg px-4 py-3">
+                  Log In
+                </Button>
+              </Link>
+            </SheetClose>
+          )}
         </div>
 
       </SheetContent>
