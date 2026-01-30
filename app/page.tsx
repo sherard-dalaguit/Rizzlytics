@@ -17,7 +17,7 @@ export default function Home() {
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div
           className="absolute inset-0 blur-[140px] opacity-90 mask-[radial-gradient(circle_at_50%_50%,transparent_0%,transparent_38%,black_62%,black_100%)]"
-          style={{backgroundImage: `radial-gradient(75% 55% at 10% 18%, rgba(255,70,197,0.40) 0%, transparent 20%), radial-gradient(78% 58% at 90% 16%, rgba(209,179,255,0.40) 0%, transparent 20%), radial-gradient(85% 60% at 50% 92%, rgba(255,70,197,0.35) 0%, transparent 40%)`}}
+          style={{backgroundImage: `radial-gradient(75% 55% at 10% 18%, rgba(255,70,197,0.40) 0%, transparent 15%), radial-gradient(78% 58% at 90% 16%, rgba(209,179,255,0.40) 0%, transparent 15%), radial-gradient(85% 60% at 50% 92%, rgba(255,70,197,0.35) 0%, transparent 20%)`}}
         />
 
         <div
