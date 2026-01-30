@@ -8,13 +8,8 @@ export interface IMediaAsset {
   analysisId?: Types.ObjectId;
 
   storageProvider: "vercel_blob"
-  blobUrl: string;
-  blobPathname: string;
-
-  width?: number;
-  height?: number;
-
-  status: "active" | "deleted";
+  blobUrl?: string;
+  blobPathname?: string;
 }
 
 export interface IMediaAssetDoc extends IMediaAsset, Document {}
@@ -27,13 +22,8 @@ const MediaAssetSchema = new Schema<IMediaAsset>(
     analysisId: { type: Schema.Types.ObjectId, ref: "Analysis" },
 
     storageProvider: { type: String, enum: ["vercel_blob"], required: true },
-    blobUrl: { type: String, required: true },
-    blobPathname: { type: String, required: true },
-
-    width: { type: Number },
-    height: { type: Number },
-
-    status: { type: String, enum: ["active", "deleted"], default: "active" },
+    blobUrl: { type: String },
+    blobPathname: { type: String },
   },
   { timestamps: true }
 )
