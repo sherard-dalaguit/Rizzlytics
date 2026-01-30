@@ -11,7 +11,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async jwt({ token, account }) {
       if (account) {
-        const response = await fetch(`http://localhost:3000/api/accounts/provider`, {
+        const response = await fetch(`https://www.rizzlytics.com/api/accounts/provider`, {
           method: 'POST',
           body: JSON.stringify({ providerAccountId: account.providerAccountId }),
         })
@@ -36,7 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         image: user.image!
       }
 
-      const response = await fetch(`http://localhost:3000/api/auth/signin-with-oauth`, {
+      const response = await fetch(`https://www.rizzlytics.com/api/auth/signin-with-oauth`, {
         method: 'POST',
         body: JSON.stringify({
           user: userInfo,

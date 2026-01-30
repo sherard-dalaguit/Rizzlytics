@@ -96,7 +96,7 @@ const ImageGrid = ({
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
 
-  const response = await fetch(`http://localhost:3000/api/ai-analysis/${id}`, {
+  const response = await fetch(`https://www.rizzlytics.com/api/ai-analysis/${id}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
