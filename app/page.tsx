@@ -9,6 +9,8 @@ import {
   IconBolt,
   IconRefresh,
 } from "@tabler/icons-react";
+import Image from "next/image";
+import React from "react";
 
 export default function Home() {
   return (
@@ -30,8 +32,14 @@ export default function Home() {
       <div className="relative max-w-7xl mx-auto px-6 z-10 py-12">
         {/* Top nav (simple) */}
         <header className="flex items-center justify-between">
-          <Link href="/" className="text-xl font-semibold">
-            <span className="primary-text-gradient">Rizzlytics</span>
+          <Link href="/" className="flex flex-row items-center gap-1 mr-8 text-2xl font-semibold">
+            <Image
+              src={"/logo.png"}
+              alt="logo"
+              width={49}
+              height={49}
+            />
+            <h1 className="primary-text-gradient">Rizzlytics</h1>
           </Link>
 
           <nav className="flex items-center gap-3">
