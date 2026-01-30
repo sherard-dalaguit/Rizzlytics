@@ -2,7 +2,6 @@ import React from "react";
 import {
   IconPhoto,
   IconMessageCircle2,
-  IconSparkles,
   IconCheck,
   IconArrowRight,
   IconInfoCircle,
@@ -72,7 +71,7 @@ function ToolCard({
       <div className="relative flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/4 ring-1 ring-white/10">
+            <div className="flex p-2 items-center justify-center rounded-full bg-white/4 ring-1 ring-white/10">
               <div className={cn("h-6 w-6", accentClasses.icon)}>{icon}</div>
             </div>
 
@@ -96,11 +95,6 @@ function ToolCard({
                 {description}
               </p>
             </div>
-          </div>
-
-          <div className="mt-1 hidden sm:flex items-center gap-2 text-xs text-zinc-400">
-            <IconSparkles className="h-4 w-4" />
-            AI feedback
           </div>
         </div>
 
