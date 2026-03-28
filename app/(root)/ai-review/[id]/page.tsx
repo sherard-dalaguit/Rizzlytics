@@ -3,9 +3,7 @@ import {
   capitalize,
   fetchMediaAsset,
   fetchMediaAssets,
-  outcomeVariant,
   pickHeadlineAndBullets,
-  toPercentage,
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import CopyButton from "@/components/ai-review/CopyButton";
@@ -210,12 +208,23 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                   {capitalize(analysis.type)} Analysis
                 </h1>
 
-                <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{capitalize(analysis.status)}</Badge>
-                  <span>Confidence: {toPercentage(result.rating?.confidence ?? 0)}</span>
-                  <Badge variant={outcomeVariant(result.rating?.overall ?? "mixed")}>
-                    Outcome: {capitalize(result.rating?.overall ?? "")}
-                  </Badge>
+                  {(() => {
+                    const outcome = (result.rating?.overall ?? "mixed").toLowerCase();
+                    const config: Record<string, { label: string; className: string }> = {
+                      poor: { label: "Needs work", className: "bg-red-500/15 text-red-400 ring-1 ring-red-500/30" },
+                      mixed: { label: "Mixed signals", className: "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30" },
+                      good: { label: "Looking good", className: "bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30" },
+                      strong: { label: "Strong", className: "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30" },
+                    };
+                    const { label, className } = config[outcome] ?? config.mixed;
+                    return (
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
 

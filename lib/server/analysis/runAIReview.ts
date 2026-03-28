@@ -23,7 +23,7 @@ export const AnalysisOutputSchema = z.object({
     uncertain: z.array(z.string().min(1)),
   }),
 
-  nextSteps: z.array(z.string().min(1)).min(1),
+  nextSteps: z.array(z.string().min(1)).min(1).max(6),
 
   // Structured takeaways — only populated for conversation type, empty array otherwise
   takeaways: z.array(z.object({
@@ -179,12 +179,11 @@ const runAIReview = async (args:
     ────────────────────────
     WHAT TO DO NEXT
     ────────────────────────
-    - For PHOTO and PROFILE mode: 6–10 bullets. This is the primary action output.
+    - For PHOTO and PROFILE mode: exactly 4–6 bullets. Fewer, higher-quality steps — not a laundry list.
     - For CONVERSATION mode: leave nextSteps as [] — use “takeaways” instead (see above).
-    - This should feel like advice from a socially calibrated human, not a checklist.
-    - Explain just enough context so the action makes intuitive sense.
-    - Focus on flow, pacing, and tone — not tactics.
-    - Prioritize steps that reduce friction and feel natural to execute.
+    - Each step should be specific enough to act on immediately. If it could apply to anyone, rewrite it.
+    - Lead each step with the action, then explain why in one sentence.
+    - Focus on the highest-leverage changes only — skip anything minor or obvious.
     - Avoid robotic language like “optimize”, “leverage”, or “ROI”.
     
     ────────────────────────
