@@ -42,7 +42,8 @@ export function outcomeVariant(outcome: string) {
 }
 
 export async function fetchMediaAsset(assetId: string): Promise<IMediaAssetDoc | null> {
-  const response = await fetch(`https://www.rizzlytics.com/api/assets/${assetId}`, {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const response = await fetch(`${baseUrl}/api/assets/${assetId}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",

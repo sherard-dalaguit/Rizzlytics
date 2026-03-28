@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import CopyButton from "@/components/ai-review/CopyButton";
 import NextStepsDialog from "@/components/ai-review/next-steps-dialogue";
+import ReplyCoachResults from "@/components/analysis/ReplyCoachResults";
+import TakeawayCard from "@/components/analysis/TakeawayCard";
 import Image from "next/image";
 import {
   Dialog,
@@ -96,7 +98,8 @@ const ImageGrid = ({
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
 
-  const response = await fetch(`https://www.rizzlytics.com/api/ai-analysis/${id}`, {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const response = await fetch(`${baseUrl}/api/ai-analysis/${id}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
@@ -117,7 +120,29 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { analysis } = await response.json();
   const { result } = analysis;
 
-  // 2) Normalize “source” shape
+  // 2) Reply coach — separate layout, return early
+  if (analysis.type === "reply_coach") {
+    const conversation = analysis.conversationId ?? null;
+    const transcript = (conversation as any)?.transcript ?? [];
+    const contextText = (conversation as any)?.contextInput ?? null;
+
+    return (
+      <ReplyCoachResults
+        analysis={analysis}
+        transcript={transcript}
+        contextText={contextText}
+      />
+    );
+  }
+
+  // 3) Normalize result arrays (always populated for photo/conversation/profile)
+  result.strengths = result.strengths ?? [];
+  result.weaknesses = result.weaknesses ?? [];
+  result.nextSteps = result.nextSteps ?? [];
+  result.takeaways = result.takeaways ?? [];
+  result.attractionSignals = result.attractionSignals ?? { positive: [], negative: [], uncertain: [] };
+
+  // 4) Normalize “source” shape
   const isConversation = analysis.type === "conversation";
   const isPhoto = analysis.type === "photo";
   const isProfile = analysis.type === "profile";
@@ -153,7 +178,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const profileUrls = profileAssets.map((a: any) => a?.blobUrl).filter(Boolean) as string[];
 
   // 6) UI helpers
-  const { headline, bullets } = pickHeadlineAndBullets(result.summary);
+  const { headline, bullets } = pickHeadlineAndBullets(result.summary ?? "");
   const hasSuggestedReplies = (result.suggestedReplies?.length ?? 0) > 0;
 
   const topSignalsCount = 2;
@@ -186,15 +211,15 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
                 <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
                   <Badge variant="outline">{capitalize(analysis.status)}</Badge>
-                  <span>Confidence: {toPercentage(result.rating.confidence)}</span>
-                  <Badge variant={outcomeVariant(result.rating.overall)}>
-                    Outcome: {capitalize(result.rating.overall)}
+                  <span>Confidence: {toPercentage(result.rating?.confidence ?? 0)}</span>
+                  <Badge variant={outcomeVariant(result.rating?.overall ?? "mixed")}>
+                    Outcome: {capitalize(result.rating?.overall ?? "")}
                   </Badge>
                 </div>
               </div>
 
               {/* Optional quick action on header */}
-              {hasSuggestedReplies && (
+              {hasSuggestedReplies && !isConversation && (
                 <div className="flex gap-2 md:pt-1">
                   <CopyButton
                     value={result.suggestedReplies![0]?.text ?? ""}
@@ -542,43 +567,86 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
         {/* ================= SIDEBAR (RIGHT) ================= */}
         <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 h-fit">
-          {/* Next steps */}
-          <div className="rounded-2xl border p-5 bg-muted/20 space-y-4 relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">What to do next</h2>
-              <Badge variant="outline">
-                {Math.min(result.nextSteps.length, 3)}/{result.nextSteps.length}
-              </Badge>
-            </div>
+          {/* Takeaways (conversation) / Next steps (photo + profile) */}
+          {isConversation ? (
+            <div className="rounded-2xl border border-white/10 bg-white/3 p-5 space-y-4 relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
+              <div>
+                <h2 className="text-lg font-semibold text-white">Takeaways for next time</h2>
+                <p className="mt-0.5 text-xs text-zinc-400">Patterns to fix before your next conversation.</p>
+              </div>
 
-            <div className="space-y-3">
-              {result.nextSteps.slice(0, 3).map((step: string, idx: number) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border bg-background/40 p-4 space-y-3"
-                >
-                  <p className="text-sm leading-relaxed">{step}</p>
+              {result.takeaways.length > 0 ? (
+                <div className="space-y-3">
+                  {result.takeaways.map((t: any, idx: number) => (
+                    <TakeawayCard key={idx} takeaway={t} index={idx} />
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-3">
+                  {result.nextSteps.map((step: string, idx: number) => (
+                    <div key={idx} className="rounded-xl border border-white/10 bg-white/3 p-4 flex gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/8 text-xs font-semibold text-zinc-400 ring-1 ring-white/10">
+                        {idx + 1}
+                      </span>
+                      <p className="text-sm leading-relaxed text-zinc-300">{step}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          ) : (
+            <div className="rounded-2xl border p-5 bg-muted/20 space-y-4 relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">What to do next</h2>
+                <Badge variant="outline">
+                  {Math.min(result.nextSteps.length, 3)}/{result.nextSteps.length}
+                </Badge>
+              </div>
 
-            {result.nextSteps.length > 3 && (
-              <NextStepsDialog nextSteps={result.nextSteps} />
-            )}
-          </div>
+              <div className="space-y-3">
+                {result.nextSteps.slice(0, 3).map((step: string, idx: number) => (
+                  <div key={idx} className="rounded-lg border bg-background/40 p-4 space-y-3">
+                    <p className="text-sm leading-relaxed">{step}</p>
+                  </div>
+                ))}
+              </div>
 
-          {/* Suggested replies */}
-          {hasSuggestedReplies && (
+              {result.nextSteps.length > 3 && (
+                <NextStepsDialog nextSteps={result.nextSteps} />
+              )}
+            </div>
+          )}
+
+          {/* Reply Coach CTA (conversation type only) */}
+          {isConversation && (
+            <div className="rounded-2xl border border-white/10 p-5 bg-white/2 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Still texting?</p>
+                <p className="text-sm text-zinc-400 mt-0.5 leading-relaxed">
+                  Use Reply Coach to get live reply options for an active conversation — not a post-mortem.
+                </p>
+              </div>
+              <a
+                href="/ai-review"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/8 transition-colors"
+              >
+                Open Reply Coach →
+              </a>
+            </div>
+          )}
+
+          {/* Suggested replies (photo/profile only — conversation uses Reply Coach) */}
+          {hasSuggestedReplies && !isConversation && (
             <div className="rounded-2xl border p-5 bg-muted/20 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Suggested replies</h2>
-                <Badge variant="outline">{result.suggestedReplies.length}</Badge>
+                <Badge variant="outline">{result.suggestedReplies!.length}</Badge>
               </div>
 
-              {/* Top replies */}
               <div className="space-y-3">
-                {result.suggestedReplies
+                {result.suggestedReplies!
                   .slice(0, topRepliesCount)
                   .map((reply: any, idx: number) => (
                     <div
@@ -591,7 +659,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                         <Badge variant="secondary">{capitalize(reply.intent)}</Badge>
                         <Badge variant="outline">{capitalize(reply.tone)}</Badge>
                       </div>
-
                       <CopyButton value={reply.text} size="sm" variant="outline">
                         Copy
                       </CopyButton>
@@ -599,17 +666,15 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                   ))}
               </div>
 
-              {/* Accordion for the rest */}
-              {result.suggestedReplies.length > topRepliesCount && (
+              {result.suggestedReplies!.length > topRepliesCount && (
                 <Accordion type="single" collapsible>
                   <AccordionItem value="more" className="border-none">
                     <AccordionTrigger className="py-2 text-sm">
-                      Show {result.suggestedReplies.length - topRepliesCount} more
+                      Show {result.suggestedReplies!.length - topRepliesCount} more
                     </AccordionTrigger>
-
                     <AccordionContent>
                       <div className="space-y-3 pt-2">
-                        {result.suggestedReplies
+                        {result.suggestedReplies!
                           .slice(topRepliesCount)
                           .map((reply: any, idx: number) => (
                             <div
@@ -624,7 +689,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                                 </Badge>
                                 <Badge variant="outline">{capitalize(reply.tone)}</Badge>
                               </div>
-
                               <CopyButton value={reply.text} size="sm" variant="outline">
                                 Copy
                               </CopyButton>

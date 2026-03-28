@@ -6,11 +6,13 @@ import {
   IconArrowRight,
   IconInfoCircle,
   IconLayersSubtract,
+  IconBolt,
 } from "@tabler/icons-react";
 
 import PhotoAnalysis from "@/components/analysis/PhotoAnalysis";
 import ConversationAnalysis from "@/components/analysis/ConversationAnalysis";
 import ProfileAnalysis from "@/components/analysis/ProfileAnalysis";
+import ReplyCoachForm from "@/components/analysis/ReplyCoachForm";
 import { cn } from "@/lib/utils";
 
 type ToolCardProps = {
@@ -19,7 +21,7 @@ type ToolCardProps = {
   icon: React.ReactNode;
   chip?: string;
   children: React.ReactNode;
-  accent?: "pink" | "violet" | "blue";
+  accent?: "pink" | "violet" | "blue" | "green";
 };
 
 function ToolCard({
@@ -48,6 +50,12 @@ function ToolCard({
       border: "group-hover:border-sky-400/35",
       icon: "text-sky-300",
       chip: "bg-sky-400/10 text-sky-200 ring-sky-300/20",
+    },
+    green: {
+      glow: "from-emerald-400/20 via-emerald-400/10 to-transparent",
+      border: "group-hover:border-emerald-400/35",
+      icon: "text-emerald-300",
+      chip: "bg-emerald-400/10 text-emerald-200 ring-emerald-300/20",
     },
   }[accent];
 
@@ -163,11 +171,22 @@ export default function AIReview() {
         </div>
         <p className="max-w-2xl text-sm text-zinc-400">
           Analyze a single photo, your full profile photo set, or a conversation
-          thread—then iterate with clear next steps.
+          thread&#8212;then iterate with clear next steps.
         </p>
       </section>
 
-      {/* Top row: Photos → Profiles → Conversations */}
+      {/* Top row: Reply Coach (full width) */}
+      <ToolCard
+        title="Reply Coach"
+        description="You're mid-conversation and not sure what to say. Screenshot it, get 4-6 reply options with reasoning in seconds. Use this while you're actively texting - not after."
+        icon={<IconBolt />}
+        chip="Live"
+        accent="green"
+      >
+        <ReplyCoachForm />
+      </ToolCard>
+
+      {/* Second row: Photos -> Profiles -> Conversations */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <ToolCard
           title="Photos"
@@ -191,9 +210,9 @@ export default function AIReview() {
 
         <ToolCard
           title="Conversations"
-          description="Diagnose messaging dynamics and momentum—get specific next replies and escalation moves."
+          description="The conversation ran its course - now debrief it. See what worked, what killed momentum, and what to do differently next time."
           icon={<IconMessageCircle2 />}
-          chip="Thread"
+          chip="Post-mortem"
           accent="blue"
         >
           <ConversationAnalysis />
@@ -211,7 +230,7 @@ export default function AIReview() {
           >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <BulletRow>
-                Run <span className="text-white">Photos</span> on your top 1–2
+                Run <span className="text-white">Photos</span> on your top 1-2
                 candidates.
               </BulletRow>
               <BulletRow>
@@ -237,24 +256,28 @@ export default function AIReview() {
               <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">Photos</p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  “Is this a strong photo?” — lighting, framing, expression,
-                  outfit, background.
+                  Is this a strong photo? Lighting, framing, expression, outfit, background.
                 </p>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">Profiles</p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  “Does this set tell a story?” — variety, balance, consistency,
-                  and lifestyle.
+                  Does this set tell a story? Variety, balance, consistency, and lifestyle.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4 sm:col-span-2">
+              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
                 <p className="text-sm font-semibold text-white">Conversations</p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  “What’s the dynamic?” — momentum, interest level, texting
-                  mistakes, and exact next replies.
+                  What went wrong? Post-mortem on a dead or ended thread. Takeaways for next time.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
+                <p className="text-sm font-semibold text-emerald-200">Reply Coach</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  What do I say right now? Live reply options while the conversation is still going.
                 </p>
               </div>
             </div>
@@ -274,7 +297,7 @@ export default function AIReview() {
                   Does this store my photos?
                 </p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Only what’s needed to generate your review (you control what
+                  Only what&#39;s needed to generate your review (you control what
                   you upload).
                 </p>
               </div>
@@ -294,7 +317,7 @@ export default function AIReview() {
                   What should I run first?
                 </p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Photo → Profile set → Conversation thread (once you’ve got
+                  Photo &#8594; Profile set &#8594; Conversation thread (once you&#39;ve got
                   matches).
                 </p>
               </div>
@@ -304,7 +327,7 @@ export default function AIReview() {
                   Can I re-run after changes?
                 </p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Yes — iterating is the whole point. Improve → re-run → confirm.
+                  Yes - iterating is the whole point. Improve &#8594; re-run &#8594; confirm.
                 </p>
               </div>
             </div>

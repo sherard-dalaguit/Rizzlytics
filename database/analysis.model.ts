@@ -3,7 +3,7 @@ import { model, models, Schema, Types, Document } from "mongoose";
 export interface IAnalysis {
   userId: Types.ObjectId;
 
-  type: "photo" | "conversation" | "profile";
+  type: "photo" | "conversation" | "profile" | "reply_coach";
   status: "queued" | "succeeded" | "failed";
 
   conversationId?: Types.ObjectId;
@@ -11,16 +11,23 @@ export interface IAnalysis {
   profileId?: Types.ObjectId;
 
   result: {
-    summary: string;
-    strengths: string[];
-    weaknesses: string[];
-    attractionSignals: {
+    // Standard analysis fields (photo / conversation / profile)
+    summary?: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    attractionSignals?: {
       positive: string[];
       negative: string[];
       uncertain: string[];
-    }
-    nextSteps: string[];
-    rating: {
+    };
+    nextSteps?: string[];
+    // Structured takeaways for conversation type
+    takeaways?: {
+      title: string;
+      why: string;
+      category: "tone" | "pacing" | "escalation" | "opener" | "mindset";
+    }[];
+    rating?: {
       overall: string;
       confidence: number;
     };
@@ -28,13 +35,22 @@ export interface IAnalysis {
       text: string;
       tone: "playful" | "direct" | "curious" | "grounded";
       intent: "re-engage" | "escalate" | "clarify" | "disengage";
-    }[]
-  }
+    }[];
+    // Reply coach fields
+    situationRead?: string;
+    momentum?: "building" | "stalling" | "dying" | "strong";
+    replies?: {
+      text: string;
+      tone: "playful" | "direct" | "curious" | "grounded";
+      intent: "re-engage" | "escalate" | "clarify" | "disengage";
+      why: string;
+    }[];
+  };
 
   error?: {
     code: string;
     message: string;
-  }
+  };
 }
 
 export interface IAnalysisDoc extends IAnalysis, Document {}
@@ -42,7 +58,7 @@ const AnalysisSchema = new Schema<IAnalysis>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
-    type: { type: String, enum: ["photo", "conversation", "profile"], required: true },
+    type: { type: String, enum: ["photo", "conversation", "profile", "reply_coach"], required: true },
     status: { type: String, enum: ["queued", "succeeded", "failed"], required: true },
 
     conversationId: { type: Schema.Types.ObjectId, ref: "ConversationSnapshot" },
@@ -50,27 +66,39 @@ const AnalysisSchema = new Schema<IAnalysis>(
     profileId: { type: Schema.Types.ObjectId, ref: "Profile" },
 
     result: {
-      summary: { type: String, required: true },
-      strengths: { type: [String], required: true },
-      weaknesses: { type: [String], required: true },
+      // Standard analysis fields (photo / conversation / profile)
+      summary: { type: String },
+      strengths: { type: [String] },
+      weaknesses: { type: [String] },
       attractionSignals: {
-        type: {
-          positive: { type: [String], required: true },
-          negative: { type: [String], required: true },
-          uncertain: { type: [String], required: true },
-        },
-        required: true
+        positive: { type: [String] },
+        negative: { type: [String] },
+        uncertain: { type: [String] },
       },
-      nextSteps: { type: [String], required: true },
+      nextSteps: { type: [String] },
+      takeaways: [{
+        title: { type: String, required: true },
+        why: { type: String, required: true },
+        category: { type: String, enum: ["tone", "pacing", "escalation", "opener", "mindset"], required: true },
+      }],
       rating: {
-        overall: { type: String, enum: ["poor", "mixed", "good", "strong"], required: true },
-        confidence: { type: Number, min: 0, max: 1, required: true },
+        overall: { type: String, enum: ["poor", "mixed", "good", "strong"] },
+        confidence: { type: Number, min: 0, max: 1 },
       },
       suggestedReplies: [{
         text: { type: String, required: true },
         tone: { type: String, enum: ["playful", "direct", "curious", "grounded"], required: true },
         intent: { type: String, enum: ["re-engage", "escalate", "clarify", "disengage"], required: true },
-      }]
+      }],
+      // Reply coach fields
+      situationRead: { type: String },
+      momentum: { type: String, enum: ["building", "stalling", "dying", "strong"] },
+      replies: [{
+        text: { type: String, required: true },
+        tone: { type: String, enum: ["playful", "direct", "curious", "grounded"], required: true },
+        intent: { type: String, enum: ["re-engage", "escalate", "clarify", "disengage"], required: true },
+        why: { type: String, required: true },
+      }],
     },
 
     error: {

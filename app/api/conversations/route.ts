@@ -1,6 +1,6 @@
-import {PutBlobResult} from "@vercel/blob";
 import {NextResponse} from "next/server";
 import MediaAsset from "@/database/media-asset.model";
+import Analysis from "@/database/analysis.model";
 import dbConnect from "@/lib/mongoose";
 import ConversationSnapshot from "@/database/conversation-snapshot.model";
 import {auth} from "@/auth";
@@ -61,7 +61,7 @@ export async function GET(_: Request): Promise<NextResponse> {
 
   await dbConnect();
 
-  const conversationSnapshots = await ConversationSnapshot
+  const allSnapshots = await ConversationSnapshot
     .find({ userId: user.id })
     .sort({ createdAt: -1 })
     .populate({
@@ -75,6 +75,18 @@ export async function GET(_: Request): Promise<NextResponse> {
       options: { sort: { createdAt: 1 } },
     })
     .lean();
+
+  // Exclude snapshots linked to reply_coach analyses
+  const replyCoachAnalysisIds = await Analysis
+    .find({ userId: user.id, type: "reply_coach" })
+    .distinct("conversationId");
+
+  const replyCoachSet = new Set(replyCoachAnalysisIds.map((id: any) => id.toString()));
+
+  const conversationSnapshots = allSnapshots.filter((snap: any) => {
+    const snapId = snap._id.toString();
+    return !replyCoachSet.has(snapId);
+  });
 
   return NextResponse.json({ conversationSnapshots });
 }

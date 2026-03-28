@@ -25,6 +25,13 @@ export const AnalysisOutputSchema = z.object({
 
   nextSteps: z.array(z.string().min(1)).min(1),
 
+  // Structured takeaways — only populated for conversation type, empty array otherwise
+  takeaways: z.array(z.object({
+    title: z.string().min(1),
+    why: z.string().min(1),
+    category: z.enum(["tone", "pacing", "escalation", "opener", "mindset"]),
+  })),
+
   rating: z.object({
     overall: z.enum(["poor", "mixed", "good", "strong"]),
     confidence: z.number().min(0).max(1),
@@ -170,9 +177,10 @@ const runAIReview = async (args:
     - “uncertain” means: high-impact signals that could be interpreted in more than one way.
     
     ────────────────────────
-    WHAT TO DO NEXT (MOST IMPORTANT SECTION)
+    WHAT TO DO NEXT
     ────────────────────────
-    - 6–10 bullets.
+    - For PHOTO and PROFILE mode: 6–10 bullets. This is the primary action output.
+    - For CONVERSATION mode: leave nextSteps as [] — use “takeaways” instead (see above).
     - This should feel like advice from a socially calibrated human, not a checklist.
     - Explain just enough context so the action makes intuitive sense.
     - Focus on flow, pacing, and tone — not tactics.
@@ -305,6 +313,28 @@ const runAIReview = async (args:
     - nextSteps should prioritize reorder/cut/replace actions with the smallest changes for the biggest gain.
     - suggestedReplies MUST be [] in PROFILE MODE.
     
+    ────────────────────────
+    TAKEAWAYS vs NEXTSTEPS — READ THIS CAREFULLY
+    ────────────────────────
+    These two fields are mutually exclusive depending on input type:
+
+    CONVERSATION INPUT:
+    - "nextSteps" MUST be [] (empty array). Do NOT populate it.
+    - "takeaways" MUST have 3–5 items. NEVER return an empty takeaways array for a conversation.
+
+    PHOTO or PROFILE INPUT:
+    - "takeaways" MUST be [] (empty array). Do NOT populate it.
+    - "nextSteps" MUST have 6–10 items as normal.
+
+    For conversation takeaways, each object must have:
+    - title: 5–9 words. A direct, scannable behavior change. Start with a verb or name the pattern.
+      Good: "Stop asking two questions in a row", "Match her energy before escalating", "Let silences breathe longer"
+      Bad: "Improve your communication", "Be more confident"
+    - why: Exactly 1 sentence. Explain the mechanism specific to THIS conversation — not generic advice.
+    - category: one of "tone" | "pacing" | "escalation" | "opener" | "mindset"
+
+    These are the most visible output of a conversation analysis — make them sharp and specific.
+
     ────────────────────────
     CONVERSATION MODE ADDITIONS
     ────────────────────────

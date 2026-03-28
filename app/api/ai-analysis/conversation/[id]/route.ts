@@ -37,6 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const analysisResult = await runAIReview({type, transcript, contextInput, otherProfileContext});
+  console.log("[conversation analysis] takeaways:", JSON.stringify(analysisResult.takeaways));
 
   await dbConnect();
 

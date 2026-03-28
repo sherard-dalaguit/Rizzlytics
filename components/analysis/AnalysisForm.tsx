@@ -11,6 +11,7 @@ import {cn} from "@/lib/utils";
 import {ITranscriptMessage} from "@/database/conversation-snapshot.model";
 import analyzeThreadScreenshot from "@/lib/server/analysis/analyzeThreadScreenshot";
 import analyzeOtherScreenshot from "@/lib/server/analysis/analyzeOtherScreenshot";
+import { mergeTranscript } from "@/lib/deduplicateTranscript";
 import {useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
 import ReorderableFileGrid from "@/components/ReorderableFileGrid";
@@ -200,11 +201,11 @@ const AnalysisForm = ({ type }: { type: string }) => {
 
       setBusyDetail("Extracting messages from screenshots...");
 
-      const extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
+      let extracted: { speaker: ITranscriptMessage["speaker"]; text: string }[] = []
       for (const threadBlob of threadBlobs) {
         const messages = await analyzeThreadScreenshot(threadBlob);
         if (!messages?.length) throw new Error(`Failed to analyze thread screenshot: ${threadBlob.pathname}`);
-        extracted.push(...messages.map(m => ({ speaker: m.speaker, text: m.text })));
+        extracted = mergeTranscript(extracted, messages.map(m => ({ speaker: m.speaker, text: m.text })));
       }
       if (!extracted.length) throw new Error('Failed to extract transcript messages from screenshots');
 
