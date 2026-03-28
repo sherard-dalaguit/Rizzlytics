@@ -9,7 +9,6 @@ import {
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import CopyButton from "@/components/ai-review/CopyButton";
-import NextStepsDialog from "@/components/ai-review/next-steps-dialogue";
 import ReplyCoachResults from "@/components/analysis/ReplyCoachResults";
 import TakeawayCard from "@/components/analysis/TakeawayCard";
 import Image from "next/image";
@@ -185,9 +184,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const topBreakdownCount = 3;
   const topRepliesCount = 4;
 
-  const getCopySnippet = (text: string) => {
-    const match = text.match(/“([^”]+)”|"([^"]+)"/);
-    return match?.[1] ?? match?.[2] ?? text;
+  const splitStep = (step: string): { headline: string; body: string } => {
+    // @ts-ignore
+    const match = step.match(/^(.+?[.!?])(\s+)(.+)$/s);
+    if (match) return { headline: match[1], body: match[3] };
+    return { headline: step, body: "" };
   };
 
   const sections = {
@@ -598,24 +599,26 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           ) : (
             <div className="rounded-2xl border p-5 bg-muted/20 space-y-4 relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">What to do next</h2>
-                <Badge variant="outline">
-                  {Math.min(result.nextSteps.length, 3)}/{result.nextSteps.length}
-                </Badge>
-              </div>
+              <h2 className="text-lg font-semibold">What to do next</h2>
 
               <div className="space-y-3">
-                {result.nextSteps.slice(0, 3).map((step: string, idx: number) => (
-                  <div key={idx} className="rounded-lg border bg-background/40 p-4 space-y-3">
-                    <p className="text-sm leading-relaxed">{step}</p>
-                  </div>
-                ))}
+                {result.nextSteps.map((step: string, idx: number) => {
+                  const { headline, body } = splitStep(step);
+                  return (
+                    <div key={idx} className="rounded-lg border bg-background/40 p-4 flex gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/8 text-xs font-semibold text-muted-foreground ring-1 ring-white/10">
+                        {idx + 1}
+                      </span>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium leading-snug">{headline}</p>
+                        {body && (
+                          <p className="text-xs text-muted-foreground leading-relaxed">{body}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-
-              {result.nextSteps.length > 3 && (
-                <NextStepsDialog nextSteps={result.nextSteps} />
-              )}
             </div>
           )}
 
