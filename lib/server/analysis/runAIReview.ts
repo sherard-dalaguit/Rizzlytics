@@ -18,9 +18,9 @@ export const AnalysisOutputSchema = z.object({
   strengths: z.array(z.string().min(1)),
   weaknesses: z.array(z.string().min(1)),
   attractionSignals: z.object({
-    positive: z.array(z.string().min(1)),
-    negative: z.array(z.string().min(1)),
-    uncertain: z.array(z.string().min(1)),
+    positive: z.array(z.string().min(1)).min(3).max(5),
+    negative: z.array(z.string().min(1)).min(3).max(5),
+    uncertain: z.array(z.string().min(1)).max(3),
   }),
 
   nextSteps: z.array(z.string().min(1)).min(1).max(6),
@@ -153,28 +153,18 @@ const runAIReview = async (args:
     even if you include multiple refinements.
     
     ────────────────────────
-    STRENGTHS & WEAKNESSES
+    SIGNALS (attractionSignals)
     ────────────────────────
-    - 4–6 bullets each.
-    - Each bullet should naturally include:
-      - what is happening
-      - why it matters
-      - what to do differently (or keep doing)
-    - Write in full, natural sentences (not rigid templates).
-    - Be specific and grounded in the input.
-    - Avoid vague traits unless you explain why they register that way.
-    
-    ────────────────────────
-    ATTRACTION SIGNALS
-    ────────────────────────
-    - Describe observable cues only.
-    - No advice here.
-    - Keep concise and concrete.
-    - Categories:
-      - positive: 3–6 bullets
-      - negative: 2–5 bullets
-      - uncertain: 2–5 bullets
-    - “uncertain” means: high-impact signals that could be interpreted in more than one way.
+    Return 3 categories. “strengths” and “weaknesses” MUST be [] — do not populate them.
+
+    - positive (3–5 bullets): What's working and why. Full sentences. What is happening + why it matters for this specific input.
+    - negative (3–5 bullets): What's hurting it and why. Include what to do differently in the same sentence.
+    - uncertain (2–3 bullets): High-impact signals that could read positively or negatively depending on the audience. Explain both readings briefly.
+
+    Rules:
+    - Be specific and grounded in the input. No vague traits.
+    - If you can't explain why something registers, don't include it.
+    - Write in full, natural sentences — not terse labels.
     
     ────────────────────────
     WHAT TO DO NEXT

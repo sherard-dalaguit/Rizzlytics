@@ -178,8 +178,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { headline, bullets } = pickHeadlineAndBullets(result.summary ?? "");
   const hasSuggestedReplies = (result.suggestedReplies?.length ?? 0) > 0;
 
-  const topSignalsCount = 2;
-  const topBreakdownCount = 3;
   const topRepliesCount = 4;
 
   const splitStep = (step: string): { headline: string; body: string } => {
@@ -227,19 +225,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                   })()}
                 </div>
               </div>
-
-              {/* Optional quick action on header */}
-              {hasSuggestedReplies && !isConversation && (
-                <div className="flex gap-2 md:pt-1">
-                  <CopyButton
-                    value={result.suggestedReplies![0]?.text ?? ""}
-                    size="sm"
-                    className="primary-gradient text-white border-0 hover:opacity-95"
-                  >
-                    Copy top reply
-                  </CopyButton>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -275,167 +260,59 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </div>
           </section>
 
-          {/* ===== Attraction signals (compact + expand) ===== */}
+          {/* ===== Signals ===== */}
           <section className="space-y-3">
-            <div className="flex items-end justify-between">
-              <h2 className="text-2xl font-semibold primary-text-gradient">Attraction signals</h2>
-              <span className="text-xs text-muted-foreground">
-                Scan first, expand if needed
-              </span>
-            </div>
+            <h2 className="text-2xl font-semibold primary-text-gradient">Attraction signals</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {([
-                { key: "positive", title: "🟢 Positive" },
-                { key: "negative", title: "🔴 Negative" },
-                { key: "uncertain", title: "🟡 Uncertain" },
-              ] as const).map(({ key, title }) => {
+                {
+                  key: "positive",
+                  label: "What's working",
+                  dot: "bg-emerald-400",
+                  column: "border-emerald-500/20 bg-emerald-500/5",
+                  item: "border-l-2 border-l-emerald-500/40 bg-emerald-500/5",
+                  text: "text-emerald-100",
+                },
+                {
+                  key: "negative",
+                  label: "What's hurting it",
+                  dot: "bg-red-400",
+                  column: "border-red-500/20 bg-red-500/5",
+                  item: "border-l-2 border-l-red-500/40 bg-red-500/5",
+                  text: "text-red-100",
+                },
+                {
+                  key: "uncertain",
+                  label: "Could go either way",
+                  dot: "bg-amber-400",
+                  column: "border-amber-500/20 bg-amber-500/5",
+                  item: "border-l-2 border-l-amber-500/40 bg-amber-500/5",
+                  text: "text-amber-100",
+                },
+              ] as const).map(({ key, label, dot, column, item, text }) => {
                 const signals = sections[key] ?? [];
-                const top = signals.slice(0, topSignalsCount);
-                const rest = signals.slice(topSignalsCount);
-
                 return (
-                  <div
-                    key={key}
-                    className="rounded-2xl border p-5 bg-muted/20 space-y-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-medium">{title}</h3>
-                      <Badge variant="outline">{signals.length}</Badge>
+                  <div key={key} className={`rounded-2xl border p-5 space-y-4 ${column}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dot}`} />
+                      <h3 className="text-sm font-semibold text-white">{label}</h3>
+                      <span className="ml-auto text-xs text-muted-foreground">{signals.length}</span>
                     </div>
-
                     <div className="space-y-2">
-                      {top.map((signal: string, idx: number) => (
-                        <div
-                          key={idx}
-                          className="rounded-lg border bg-background/40 p-3"
-                        >
-                          <p className="text-sm leading-relaxed">{signal}</p>
-                        </div>
-                      ))}
-
-                      {signals.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          No signals detected.
-                        </p>
+                      {signals.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">None detected.</p>
+                      ) : (
+                        signals.map((signal: string, idx: number) => (
+                          <div key={idx} className={`rounded-lg pl-3 pr-3 py-3 ${item}`}>
+                            <p className={`text-sm leading-relaxed ${text}`}>{signal}</p>
+                          </div>
+                        ))
                       )}
                     </div>
-
-                    {rest.length > 0 && (
-                      <Accordion type="single" collapsible className="pt-1">
-                        <AccordionItem value="more" className="border-none">
-                          <AccordionTrigger className="py-2 text-sm">
-                            Show {rest.length} more
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-2 pt-2">
-                              {rest.map((signal: string, idx: number) => (
-                                <div
-                                  key={idx}
-                                  className="rounded-lg border bg-background/40 p-3"
-                                >
-                                  <p className="text-sm leading-relaxed">
-                                    {signal}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    )}
                   </div>
                 );
               })}
-            </div>
-          </section>
-
-          {/* ===== Breakdown (compact + expand) ===== */}
-          <section className="space-y-3">
-            <h2 className="text-2xl font-semibold primary-text-gradient">Breakdown</h2>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* What worked */}
-              <div className="rounded-2xl border p-5 bg-muted/20 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">What worked</h3>
-                  <Badge variant="outline">{result.strengths.length}</Badge>
-                </div>
-
-                <div className="space-y-2">
-                  {result.strengths.slice(0, topBreakdownCount).map((x: string, i: number) => (
-                    <div key={i} className="rounded-lg border bg-background/40 p-4">
-                      <p className="text-sm leading-relaxed">
-                        <span className="mr-2">✓</span>
-                        {x}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {result.strengths.length > topBreakdownCount && (
-                  <Accordion type="single" collapsible>
-                    <AccordionItem value="more" className="border-none">
-                      <AccordionTrigger className="py-2 text-sm">
-                        Show {result.strengths.length - topBreakdownCount} more
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2 pt-2">
-                          {result.strengths.slice(topBreakdownCount).map((x: string, i: number) => (
-                            <div key={i} className="rounded-lg border bg-background/40 p-4">
-                              <p className="text-sm leading-relaxed">
-                                <span className="mr-2">✓</span>
-                                {x}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                )}
-              </div>
-
-              {/* What hurt momentum */}
-              <div className="rounded-2xl border p-5 bg-muted/20 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">What hurt momentum</h3>
-                  <Badge variant="outline">{result.weaknesses.length}</Badge>
-                </div>
-
-                <div className="space-y-2">
-                  {result.weaknesses.slice(0, topBreakdownCount).map((x: string, i: number) => (
-                    <div key={i} className="rounded-lg border bg-background/40 p-4">
-                      <p className="text-sm leading-relaxed">
-                        <span className="mr-2">⚠</span>
-                        {x}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {result.weaknesses.length > topBreakdownCount && (
-                  <Accordion type="single" collapsible>
-                    <AccordionItem value="more" className="border-none">
-                      <AccordionTrigger className="py-2 text-sm">
-                        Show {result.weaknesses.length - topBreakdownCount} more
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2 pt-2">
-                          {result.weaknesses.slice(topBreakdownCount).map((x: string, i: number) => (
-                            <div key={i} className="rounded-lg border bg-background/40 p-4">
-                              <p className="text-sm leading-relaxed">
-                                <span className="mr-2">⚠</span>
-                                {x}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                )}
-              </div>
             </div>
           </section>
 
