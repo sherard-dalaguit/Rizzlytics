@@ -7,6 +7,9 @@ export interface IMediaAsset {
 
   analysisId?: Types.ObjectId;
 
+  createdAt?: Date;
+  updatedAt?: Date;
+
   storageProvider: "vercel_blob"
   blobUrl?: string;
   blobPathname?: string;

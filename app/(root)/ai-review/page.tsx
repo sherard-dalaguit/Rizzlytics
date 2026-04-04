@@ -2,9 +2,6 @@ import React from "react";
 import {
   IconPhoto,
   IconMessageCircle2,
-  IconCheck,
-  IconArrowRight,
-  IconInfoCircle,
   IconLayersSubtract,
   IconBolt,
 } from "@tabler/icons-react";
@@ -115,46 +112,6 @@ function ToolCard({
   );
 }
 
-function SectionCard({
-  title,
-  subtitle,
-  icon,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/3 p-6">
-      <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-[120%] -translate-x-1/2 rounded-full bg-white/5 blur-2xl" />
-      <div className="relative flex flex-col gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            {icon ? <span className="text-zinc-300">{icon}</span> : null}
-            <h3 className="text-base font-semibold text-white">{title}</h3>
-          </div>
-          {subtitle ? (
-            <p className="mt-1 text-sm text-zinc-400">{subtitle}</p>
-          ) : null}
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function BulletRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/2 p-3">
-      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
-        <IconCheck className="h-4 w-4 text-zinc-200" />
-      </div>
-      <div className="text-sm text-zinc-300">{children}</div>
-    </div>
-  );
-}
 
 export default function AIReview() {
   return (
@@ -175,19 +132,8 @@ export default function AIReview() {
         </p>
       </section>
 
-      {/* Top row: Reply Coach (full width) */}
-      <ToolCard
-        title="Reply Coach"
-        description="You're mid-conversation and not sure what to say. Screenshot it, get 4-6 reply options with reasoning in seconds. Use this while you're actively texting - not after."
-        icon={<IconBolt />}
-        chip="Live"
-        accent="green"
-      >
-        <ReplyCoachForm />
-      </ToolCard>
-
-      {/* Second row: Photos -> Profiles -> Conversations */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Tool grid: Photos | Profiles / Reply Coach | Conversations */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ToolCard
           title="Photos"
           description="Analyze one photo to improve first impressions: lighting, framing, style, and vibe."
@@ -209,6 +155,16 @@ export default function AIReview() {
         </ToolCard>
 
         <ToolCard
+          title="Reply Coach"
+          description="You're mid-conversation and not sure what to say. Screenshot it, get 4-6 reply options with reasoning in seconds. Use this while you're actively texting - not after."
+          icon={<IconBolt />}
+          chip="Live"
+          accent="green"
+        >
+          <ReplyCoachForm />
+        </ToolCard>
+
+        <ToolCard
           title="Conversations"
           description="The conversation ran its course - now debrief it. See what worked, what killed momentum, and what to do differently next time."
           icon={<IconMessageCircle2 />}
@@ -219,121 +175,9 @@ export default function AIReview() {
         </ToolCard>
       </div>
 
-      {/* Bottom half */}
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left column */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          <SectionCard
-            title="Quick start"
-            subtitle="The fastest path to real improvement (no fluff)."
-            icon={<IconArrowRight className="h-4 w-4" />}
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <BulletRow>
-                Run <span className="text-white">Photos</span> on your top 1-2
-                candidates.
-              </BulletRow>
-              <BulletRow>
-                Then use <span className="text-white">Profiles</span> to make
-                the whole set cohesive.
-              </BulletRow>
-              <BulletRow>
-                Use <span className="text-white">Conversations</span> only when
-                you have a real thread to diagnose.
-              </BulletRow>
-              <BulletRow>
-                Re-run after edits until the signals are clean.
-              </BulletRow>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="What each tool optimizes"
-            subtitle="So the output feels consistent and predictable."
-            icon={<IconInfoCircle className="h-4 w-4" />}
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">Photos</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Is this a strong photo? Lighting, framing, expression, outfit, background.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">Profiles</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Does this set tell a story? Variety, balance, consistency, and lifestyle.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">Conversations</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  What went wrong? Post-mortem on a dead or ended thread. Takeaways for next time.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
-                <p className="text-sm font-semibold text-emerald-200">Reply Coach</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  What do I say right now? Live reply options while the conversation is still going.
-                </p>
-              </div>
-            </div>
-          </SectionCard>
-        </div>
-
-        {/* Right column */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <SectionCard
-            title="FAQ"
-            subtitle="Quick trust-builders."
-            icon={<IconInfoCircle className="h-4 w-4" />}
-          >
-            <div className="space-y-3">
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">
-                  Does this store my photos?
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Only what&#39;s needed to generate your review (you control what
-                  you upload).
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">
-                  Why do Photos and Profiles both exist?
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Photos scores a single image. Profiles checks how your photos
-                  work together as a set.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">
-                  What should I run first?
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Photo &#8594; Profile set &#8594; Conversation thread (once you&#39;ve got
-                  matches).
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-                <p className="text-sm font-semibold text-white">
-                  Can I re-run after changes?
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Yes - iterating is the whole point. Improve &#8594; re-run &#8594; confirm.
-                </p>
-              </div>
-            </div>
-          </SectionCard>
-        </div>
-      </div>
+      <p className="text-xs text-zinc-500">
+        Your uploads are only used to generate your review. Delete anything anytime from Photos or Conversations.
+      </p>
     </main>
   );
 }

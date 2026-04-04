@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDate, shortId } from "@/lib/utils";
 import {
   IconArrowRight,
@@ -10,63 +12,91 @@ import {
   IconMessageCircle2,
   IconPhoto,
   IconSparkles,
-  IconTrendingUp,
   IconUser,
 } from "@tabler/icons-react";
-import {Skeleton} from "@/components/ui/skeleton";
 
 type MediaAssetLike = {
-  _id: any;
+  _id: string;
   blobUrl?: string;
   createdAt?: string | Date;
-  analysisId?: any;
+  analysisId?: string;
 };
 
 type ConversationSnapshotLike = {
-  _id: any;
+  _id: string;
   createdAt?: string | Date;
-  threadScreenshotAssetIds?: any[];
-  otherProfileAssetIds?: any[];
+  threadScreenshotAssetIds?: Array<{ blobUrl?: string } | string>;
+  otherProfileAssetIds?: Array<{ blobUrl?: string } | string>;
   contextInput?: string;
-  analysisId?: any;
+  analysisId?: string;
 };
 
 type ProfileLike = {
-  _id: any;
+  _id: string;
   createdAt?: string | Date;
-  myProfileAssetIds?: any[];
+  myProfileAssetIds?: Array<{ blobUrl?: string } | string>;
   contextInput?: string;
-  analysisId?: any;
+  analysisId?: string;
 };
 
-function safeTime(value: any): number {
+function safeTime(value: unknown): number {
   if (!value) return 0;
-  const t = new Date(value).getTime();
+  const t = new Date(value as string | Date).getTime();
   return Number.isFinite(t) ? t : 0;
 }
 
 function resolveFirstThumb(convo: ConversationSnapshotLike | null): string | null {
   if (!convo) return null;
-  const first = Array.isArray(convo.threadScreenshotAssetIds) ? convo.threadScreenshotAssetIds[0] : null;
+  const first = Array.isArray(convo.threadScreenshotAssetIds)
+    ? convo.threadScreenshotAssetIds[0]
+    : null;
+
   if (!first) return null;
-  if (typeof first === "object" && (first as any).blobUrl) return (first as any).blobUrl;
+  if (typeof first === "object" && first.blobUrl) return first.blobUrl;
   return null;
 }
 
 function resolveFirstProfileThumb(profile: ProfileLike | null): string | null {
   if (!profile) return null;
-  const first = Array.isArray(profile.myProfileAssetIds) ? profile.myProfileAssetIds[0] : null;
+  const first = Array.isArray(profile.myProfileAssetIds)
+    ? profile.myProfileAssetIds[0]
+    : null;
+
   if (!first) return null;
-  if (typeof first === "object" && (first as any).blobUrl) return (first as any).blobUrl;
+  if (typeof first === "object" && first.blobUrl) return first.blobUrl;
   return null;
 }
 
-function countAssetIds(list: any[] | undefined): number {
+function countAssetIds(list: unknown[] | undefined): number {
   if (!Array.isArray(list)) return 0;
   return list.length;
 }
 
+function getLatestReviewHref(params: {
+  latestPhoto: MediaAssetLike | null;
+  latestConvo: ConversationSnapshotLike | null;
+  latestProfile: ProfileLike | null;
+}) {
+  const { latestPhoto, latestConvo, latestProfile } = params;
+
+  const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
+  const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
+  const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
+
+  if (photoT >= convoT && photoT >= profileT) {
+    return latestPhoto?.analysisId ? `/ai-review/${latestPhoto.analysisId}` : "/ai-review";
+  }
+
+  if (convoT >= photoT && convoT >= profileT) {
+    return latestConvo?.analysisId ? `/ai-review/${latestConvo.analysisId}` : "/ai-review";
+  }
+
+  return latestProfile?.analysisId ? `/ai-review/${latestProfile.analysisId}` : "/ai-review";
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<MediaAssetLike[]>([]);
   const [convos, setConvos] = useState<ConversationSnapshotLike[]>([]);
@@ -101,8 +131,8 @@ export default function DashboardPage() {
         } else {
           console.error("Failed to fetch /api/profiles");
         }
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -111,9 +141,20 @@ export default function DashboardPage() {
     run();
   }, []);
 
-  const sortedPhotos = useMemo(() => [...photos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)), [photos]);
-  const sortedConvos = useMemo(() => [...convos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)), [convos]);
-  const sortedProfiles = useMemo(() => [...profiles].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)), [profiles]);
+  const sortedPhotos = useMemo(
+    () => [...photos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)),
+    [photos]
+  );
+
+  const sortedConvos = useMemo(
+    () => [...convos].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)),
+    [convos]
+  );
+
+  const sortedProfiles = useMemo(
+    () => [...profiles].sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt)),
+    [profiles]
+  );
 
   const latestPhoto = sortedPhotos[0] ?? null;
   const latestConvo = sortedConvos[0] ?? null;
@@ -122,625 +163,463 @@ export default function DashboardPage() {
   const photoCount = sortedPhotos.length;
   const convoCount = sortedConvos.length;
   const profileCount = sortedProfiles.length;
+  const totalCount = photoCount + convoCount + profileCount;
 
-  const convWithContext = useMemo(() => sortedConvos.filter((c) => Boolean(c.contextInput?.trim())).length, [sortedConvos]);
+  const convWithContext = useMemo(
+    () => sortedConvos.filter((c) => Boolean(c.contextInput?.trim())).length,
+    [sortedConvos]
+  );
 
-  const lastUploadAt = useMemo(() => {
-    const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
-    const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-    const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
-    return Math.max(photoT, convoT, profileT);
-  }, [latestPhoto, latestConvo, latestProfile]);
+  const latestReviewHref = useMemo(
+    () =>
+      getLatestReviewHref({
+        latestPhoto,
+        latestConvo,
+        latestProfile,
+      }),
+    [latestPhoto, latestConvo, latestProfile]
+  );
 
-  const lastUploadLabel = useMemo(() => {
-    if (!lastUploadAt) return "—";
-    return formatDate(new Date(lastUploadAt));
-  }, [lastUploadAt]);
+  const heroTitle =
+    totalCount === 0 ? "Start your first analysis" : "You’re fully analyzed";
 
-  const snapshotLabel =
-    photoCount === 0 && convoCount === 0 && profileCount === 0
-      ? "No uploads yet"
-      : `Snapshot • ${photoCount} photo${photoCount === 1 ? "" : "s"} • ${profileCount} profile${
-        profileCount === 1 ? "" : "s"
-      } • ${convoCount} conversation${convoCount === 1 ? "" : "s"}`;
+  const heroSubtitle =
+    totalCount === 0
+      ? "Upload a few photos or a conversation thread so Rizzlytics can give you a real baseline."
+      : "Now just improve one thing at a time. Small iterations beat random changes.";
 
-  const nextSteps = useMemo(() => {
-    const steps: Array<{
-      title: string;
-      description: string;
-      cta: string;
-      href: string;
-      icon: React.ReactNode;
-    }> = [];
-
-    if (photoCount === 0 && convoCount === 0 && profileCount === 0) {
-      steps.push({
-        title: "Upload your first photo",
-        description: "Start with 3–5 photos so the AI has signal to compare.",
+  const focusCard = useMemo(() => {
+    if (totalCount === 0) {
+      return {
+        eyebrow: "Today’s focus",
+        title: "Upload your first photos",
+        description:
+          "Start with 3–5 photos so the AI has enough signal to compare strengths, weaknesses, and consistency.",
         cta: "Go to Photos",
         href: "/photos",
         icon: <IconPhoto className="h-5 w-5" />,
-      });
-      steps.push({
-        title: "Upload a conversation thread",
-        description: "Add screenshots + a bit of context to get actionable rewrites.",
-        cta: "Go to Conversations",
-        href: "/conversations",
-        icon: <IconMessageCircle2 className="h-5 w-5" />,
-      });
-      return steps;
+      };
     }
 
     if (photoCount > 0 && profileCount === 0) {
-      steps.push({
-        title: "Create a profile set",
-        description: "Bundle your best photos into a profile analysis (this is what you’ll actually use).",
+      return {
+        eyebrow: "Today’s focus",
+        title: "Create your first profile set",
+        description:
+          "You already have photos. Bundle the strongest ones into a profile so the advice maps to what you’ll actually use.",
         cta: "Go to Profiles",
         href: "/profiles",
         icon: <IconUser className="h-5 w-5" />,
-      });
+      };
     }
-
-    steps.push({
-      title: "Improve one thing today",
-      description: "Pick ONE: swap a photo or rewrite ONE conversation segment. Small iterations compound.",
-      cta: "Open AI Review",
-      href: (() => {
-        const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
-        const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-        const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
-
-        const best =
-          photoT >= convoT && photoT >= profileT
-            ? latestPhoto?.analysisId
-              ? `/ai-review/${latestPhoto.analysisId}`
-              : "/ai-review"
-            : convoT >= photoT && convoT >= profileT
-              ? latestConvo?.analysisId
-                ? `/ai-review/${latestConvo.analysisId}`
-                : "/ai-review"
-              : latestProfile?.analysisId
-                ? `/ai-review/${latestProfile.analysisId}`
-                : "/ai-review";
-
-        return best;
-      })(),
-      icon: <IconBrain className="h-5 w-5" />,
-    });
 
     if (convoCount > 0 && convWithContext < convoCount) {
-      steps.push({
-        title: "Add context to older convos",
-        description: "A single line of context can turn generic advice into exact rewrites.",
-        cta: "Review conversations",
+      return {
+        eyebrow: "Today’s focus",
+        title: "Add context to an older conversation",
+        description:
+          "A single line of context makes the rewrite advice much more precise and useful.",
+        cta: "Review Conversations",
         href: "/conversations",
-        icon: <IconSparkles className="h-5 w-5" />,
-      });
-    } else {
-      steps.push({
-        title: "Upgrade your weakest photo",
-        description: "Replace one low-signal photo (dark / blurry / awkward crop) with a cleaner shot.",
-        cta: "Review photos",
+        icon: <IconMessageCircle2 className="h-5 w-5" />,
+      };
+    }
+
+    return {
+      eyebrow: "Today’s focus",
+      title: "Open your latest AI review",
+      description:
+        "Don’t try to fix everything. Pick one photo swap or one message rewrite and implement it today.",
+      cta: "Open AI Review",
+      href: latestReviewHref,
+      icon: <IconBrain className="h-5 w-5" />,
+    };
+  }, [totalCount, photoCount, profileCount, convoCount, convWithContext, latestReviewHref]);
+
+  const quickActions = useMemo(() => {
+    const actions = [
+      {
+        label: "Photos",
         href: "/photos",
-        icon: <IconPhoto className="h-5 w-5" />,
+        icon: <IconPhoto className="h-4 w-4" />,
+      },
+      {
+        label: "Profiles",
+        href: "/profiles",
+        icon: <IconUser className="h-4 w-4" />,
+      },
+      {
+        label: "Conversations",
+        href: "/conversations",
+        icon: <IconMessageCircle2 className="h-4 w-4" />,
+      },
+    ];
+
+    if (totalCount > 0) {
+      actions.push({
+        label: "Latest AI Review",
+        href: latestReviewHref,
+        icon: <IconSparkles className="h-4 w-4" />,
       });
     }
 
-    // show just 2 cards to keep it tight
-    return steps.slice(0, 2);
-  }, [photoCount, convoCount, profileCount, latestPhoto, latestConvo, latestProfile, convWithContext]);
+    return actions;
+  }, [totalCount, latestReviewHref]);
 
   if (loading) {
     return (
-      <main className="max-w-352 mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
-        <section className="space-y-1">
-          <h1 className="inline-block text-4xl font-semibold text-transparent bg-clip-text primary-text-gradient">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Your next best moves, based on what you’ve uploaded so far.</p>
-        </section>
+      <main className="mx-auto max-w-6xl px-6 py-10">
+        <div className="space-y-8">
+          <section className="space-y-2">
+            <Skeleton className="h-10 w-52" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </section>
 
-        {/* Hero */}
-        <section className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden relative">
-          <div className="relative p-6 md:p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-3 w-72" />
-              </div>
-
-              <Skeleton className="h-8 w-[520px] max-w-full" />
-
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[620px] max-w-full" />
-                <Skeleton className="h-4 w-[560px] max-w-full" />
+          <section className="rounded-3xl border border-white/10 bg-muted/10 p-6 md:p-8">
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-[420px] max-w-full" />
+              <Skeleton className="h-4 w-[560px] max-w-full" />
+              <div className="pt-2">
+                <Skeleton className="h-11 w-40 rounded-xl" />
               </div>
             </div>
+          </section>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <Skeleton className="h-10 w-32 rounded-xl" />
-              <Skeleton className="h-10 w-40 rounded-xl" />
-            </div>
-          </div>
-        </section>
-
-        {/* STATS ROW */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="relative rounded-2xl border border-white/10 bg-muted/10 overflow-hidden"
-            >
-              <div className="relative p-5 flex items-center justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-28" />
-                  <Skeleton className="h-7 w-20" />
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="space-y-6 lg:col-span-7">
+              <div className="rounded-3xl border border-white/10 bg-muted/10 p-6">
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-[320px] max-w-full" />
+                  <Skeleton className="h-4 w-[500px] max-w-full" />
+                  <Skeleton className="h-11 w-44 rounded-xl" />
                 </div>
-
-                <Skeleton className="h-10 w-10 rounded-xl" />
               </div>
-            </div>
-          ))}
-        </section>
 
-        {/* MAIN GRID */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-60" />
-            </div>
-
-            {/* Next steps cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl border border-white/10 bg-muted/10 p-5 relative overflow-hidden"
-                >
-                  <div className="relative space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-xl" />
-                      <Skeleton className="h-4 w-40" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Skeleton className="h-3 w-[260px] max-w-full" />
-                      <Skeleton className="h-3 w-[220px] max-w-full" />
-                    </div>
-
-                    <Skeleton className="h-9 w-36 rounded-xl" />
+              <div className="rounded-2xl border border-white/10 bg-muted/10 p-5">
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-28" />
+                  <div className="flex flex-wrap gap-3">
+                    <Skeleton className="h-10 w-28 rounded-xl" />
+                    <Skeleton className="h-10 w-32 rounded-xl" />
+                    <Skeleton className="h-10 w-36 rounded-xl" />
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* One-screen CTA */}
-            <div className="rounded-2xl border border-white/10 bg-muted/10 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative overflow-hidden">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-56" />
-                <Skeleton className="h-3 w-[420px] max-w-full" />
               </div>
-
-              <Skeleton className="h-10 w-44 rounded-xl" />
             </div>
-          </div>
 
-          {/* Right */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-4 lg:col-span-5">
               <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-56" />
-            </div>
-
-            <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden"
+                  className="rounded-2xl border border-white/10 bg-muted/10 p-4"
                 >
-                  <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-                    <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
-
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
                     <div className="min-w-0 flex-1 space-y-2">
                       <Skeleton className="h-3 w-24" />
-                      <Skeleton className="h-4 w-[260px] max-w-full" />
-                      <Skeleton className="h-3 w-[220px] max-w-full" />
-
-                      {/* chips row (optional, like convo/profile cards) */}
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                        <Skeleton className="h-5 w-24 rounded-full" />
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                      </div>
+                      <Skeleton className="h-4 w-48 max-w-full" />
+                      <Skeleton className="h-3 w-36 max-w-full" />
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-9 w-20 rounded-xl" />
-                      <Skeleton className="h-9 w-24 rounded-xl" />
-                    </div>
+                    <Skeleton className="h-9 w-16 rounded-xl" />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="max-w-352 mx-auto px-6 py-10 space-y-8">
-      {/* Header */}
-      <section className="space-y-1">
-        <h1 className="inline-block text-4xl font-semibold text-transparent bg-clip-text primary-text-gradient">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Your next best moves, based on what you’ve uploaded so far.</p>
-      </section>
+    <main className="mx-auto max-w-6xl px-6 py-10">
+      <div className="space-y-8">
+        <section className="space-y-2">
+          <h1 className="inline-block bg-clip-text text-4xl font-semibold text-transparent primary-text-gradient">
+            Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            A cleaner view of what to do next.
+          </p>
+        </section>
 
-      {/* Hero */}
-      <section className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden relative">
-        <div className="pointer-events-none absolute inset-0 primary-gradient opacity-15 blur-3xl" />
+        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-muted/10">
+          <div className="pointer-events-none absolute inset-0 primary-gradient opacity-15 blur-3xl" />
 
-        <div className="relative p-6 md:p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-          <div className="space-y-2">
-            <p className="text-xs text-white/60 flex items-center gap-2">
-              <IconTrendingUp className="h-4 w-4" />
-              {snapshotLabel}
-            </p>
+          <div className="relative p-6 md:p-8">
+            <div className="max-w-3xl space-y-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/50">
+                Rizzlytics
+              </p>
 
-            <h2 className="text-2xl md:text-3xl font-semibold text-white">
-              {photoCount + convoCount + profileCount === 0 ? "Start your first analysis" : "You’re fully analyzed — now iterate"}
-            </h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                {heroTitle}
+              </h2>
 
-            <p className="text-sm text-white/70 max-w-2xl">
-              {photoCount + convoCount + profileCount === 0
-                ? "Upload a photo, create a profile, or add a conversation to get a high-signal diagnostic and action plan."
-                : "Use the action cards below to fix the highest-impact issues first. One clean change per day beats random changes."}
-            </p>
+              <p className="max-w-2xl text-sm leading-relaxed text-white/70">
+                {heroSubtitle}
+              </p>
+
+              <div className="pt-3">
+                <Button
+                  className="primary-gradient border-0 text-white hover:opacity-95"
+                  onClick={() => router.push(focusCard.href)}
+                  type="button"
+                >
+                  {focusCard.icon}
+                  <span className="ml-2">{focusCard.cta}</span>
+                </Button>
+              </div>
+            </div>
           </div>
+        </section>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <Button
-              className="primary-gradient text-white border-0 hover:opacity-95"
-              onClick={() => (window.location.href = "/photos")}
-              type="button"
-            >
-              <IconPhoto className="h-5 w-5 mr-2" />
-              Photos
-            </Button>
-
-            <Button
-              className="bg-white/5 border border-white/10 text-white hover:bg-white/10"
-              onClick={() => (window.location.href = "/conversations")}
-              type="button"
-            >
-              <IconMessageCircle2 className="h-5 w-5 mr-2" />
-              Conversations
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* STATS ROW */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatTile label="Photos uploaded" value={`${photoCount}`} icon={<IconPhoto className="h-5 w-5" />} />
-        <StatTile label="Conversations uploaded" value={`${convoCount}`} icon={<IconMessageCircle2 className="h-5 w-5" />} />
-        <StatTile label="Profiles created" value={`${profileCount}`} icon={<IconUser className="h-5 w-5" />} />
-        <StatTile
-          label="Last upload"
-          value={lastUploadLabel}
-          icon={<IconTrendingUp className="h-5 w-5" />}
-          valueClassName="text-sm font-semibold text-white"
-        />
-      </section>
-
-      {/* MAIN GRID: Next steps (+ CTA under it) | Recent activity */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Next steps + one-screen plan (stacked) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-white">Next steps</p>
-            <p className="text-xs text-muted-foreground">Do these in order — highest impact first.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {nextSteps.map((s) => (
-              <ActionCard key={s.title} title={s.title} description={s.description} cta={s.cta} href={s.href} icon={s.icon} />
-            ))}
-          </div>
-
-          {/* One-screen CTA (moved under next steps, not full-width row) */}
-          <OneScreenCta
-            latestPhoto={latestPhoto}
-            latestConvo={latestConvo}
-            latestProfile={latestProfile}
-          />
-        </div>
-
-        {/* Right: Recent activity */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-white">Recent activity</p>
-            <p className="text-xs text-muted-foreground">Jump back into the latest items.</p>
-          </div>
-
-          <div className="space-y-4">
-            <RecentCard
-              kind="Latest photo"
-              thumbnailUrl={latestPhoto?.blobUrl}
-              title={latestPhoto ? `Photo • ${shortId(latestPhoto._id?.toString?.() ?? String(latestPhoto._id))}` : "No photos yet"}
-              subtitle={latestPhoto?.createdAt ? `Uploaded ${formatDate(latestPhoto.createdAt)}` : "Upload a photo to get started."}
-              primaryCta={{ label: "View", onClick: () => (window.location.href = "/photos") }}
-              secondaryCta={
-                latestPhoto?.analysisId
-                  ? {
-                    label: "AI Review",
-                    onClick: () => (window.location.href = `/ai-review/${latestPhoto.analysisId}`),
-                    variant: "primary",
-                    icon: <IconBrain className="h-4 w-4" />,
-                  }
-                  : undefined
-              }
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-7">
+            <FocusCard
+              eyebrow={focusCard.eyebrow}
+              title={focusCard.title}
+              description={focusCard.description}
+              cta={focusCard.cta}
+              icon={focusCard.icon}
+              onClick={() => router.push(focusCard.href)}
             />
 
-            <RecentCard
+            <QuickActionsCard
+              actions={quickActions}
+              onNavigate={(href) => router.push(href)}
+            />
+          </div>
+
+          <div className="space-y-4 lg:col-span-5">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-white">Recent activity</p>
+              <p className="text-xs text-muted-foreground">
+                Jump back into your latest items.
+              </p>
+            </div>
+
+            <RecentCompactCard
+              kind="Latest photo"
+              thumbnailUrl={latestPhoto?.blobUrl}
+              title={
+                latestPhoto
+                  ? `Photo • ${shortId(
+                    latestPhoto._id?.toString?.() ?? String(latestPhoto._id)
+                  )}`
+                  : "No photos yet"
+              }
+              subtitle={
+                latestPhoto?.createdAt
+                  ? `Uploaded ${formatDate(latestPhoto.createdAt)}`
+                  : "Upload a few photos to get started."
+              }
+              meta={latestPhoto ? `${photoCount} total` : undefined}
+              onClick={() => router.push("/photos")}
+            />
+
+            <RecentCompactCard
               kind="Latest conversation"
               thumbnailUrl={resolveFirstThumb(latestConvo)}
               title={
-                latestConvo ? `Conversation • ${shortId(latestConvo._id?.toString?.() ?? String(latestConvo._id))}` : "No conversations yet"
-              }
-              subtitle={latestConvo?.createdAt ? `Uploaded ${formatDate(latestConvo.createdAt)}` : "Upload a conversation to get started."}
-              chips={
                 latestConvo
-                  ? [
-                    `Thread: ${countAssetIds(latestConvo.threadScreenshotAssetIds)}`,
-                    `Profile: ${countAssetIds(latestConvo.otherProfileAssetIds)}`,
-                    latestConvo.contextInput?.trim() ? "Has context" : "No context",
-                  ]
-                  : []
+                  ? `Conversation • ${shortId(
+                    latestConvo._id?.toString?.() ?? String(latestConvo._id)
+                  )}`
+                  : "No conversations yet"
               }
-              primaryCta={{ label: "View", onClick: () => (window.location.href = "/conversations") }}
-              secondaryCta={
-                latestConvo?.analysisId
-                  ? {
-                    label: "AI Review",
-                    onClick: () => (window.location.href = `/ai-review/${latestConvo.analysisId}`),
-                    variant: "primary",
-                    icon: <IconBrain className="h-4 w-4" />,
-                  }
+              subtitle={
+                latestConvo?.createdAt
+                  ? `Uploaded ${formatDate(latestConvo.createdAt)}`
+                  : "Upload a thread to get started."
+              }
+              meta={
+                latestConvo
+                  ? `${countAssetIds(latestConvo.threadScreenshotAssetIds)} screenshots`
                   : undefined
               }
+              onClick={() => router.push("/conversations")}
             />
 
-            <RecentCard
+            <RecentCompactCard
               kind="Latest profile"
               thumbnailUrl={resolveFirstProfileThumb(latestProfile)}
-              title={latestProfile ? `Profile • ${shortId(latestProfile._id?.toString?.() ?? String(latestProfile._id))}` : "No profiles yet"}
-              subtitle={latestProfile?.createdAt ? `Uploaded ${formatDate(latestProfile.createdAt)}` : "Create a profile set to get started."}
-              chips={
+              title={
                 latestProfile
-                  ? [`Photos: ${countAssetIds(latestProfile.myProfileAssetIds)}`, latestProfile.contextInput?.trim() ? "Has context" : "No context"]
-                  : []
+                  ? `Profile • ${shortId(
+                    latestProfile._id?.toString?.() ?? String(latestProfile._id)
+                  )}`
+                  : "No profiles yet"
               }
-              primaryCta={{ label: "View", onClick: () => (window.location.href = "/profiles") }}
-              secondaryCta={
-                latestProfile?.analysisId
-                  ? {
-                    label: "AI Review",
-                    onClick: () => (window.location.href = `/ai-review/${latestProfile.analysisId}`),
-                    variant: "primary",
-                    icon: <IconBrain className="h-4 w-4" />,
-                  }
+              subtitle={
+                latestProfile?.createdAt
+                  ? `Created ${formatDate(latestProfile.createdAt)}`
+                  : "Create a profile set to get started."
+              }
+              meta={
+                latestProfile
+                  ? `${countAssetIds(latestProfile.myProfileAssetIds)} photos`
                   : undefined
               }
+              onClick={() => router.push("/profiles")}
             />
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
 
-/* ------------------------------ UI pieces ------------------------------ */
-
-function StatTile({
-  label,
-  value,
-  icon,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  valueClassName?: string;
-}) {
-  return (
-    <div className="relative rounded-2xl border border-white/10 bg-muted/10 overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 primary-gradient opacity-10 blur-3xl" />
-      <div className="relative p-5 flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-xs text-white/60">{label}</p>
-          <p className={cn("text-xl font-semibold text-white", valueClassName)}>{value}</p>
-        </div>
-
-        <div className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-white/80">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ActionCard({
-  title,
-  description,
-  cta,
-  href,
-  icon,
-}: {
+function FocusCard({
+                     eyebrow,
+                     title,
+                     description,
+                     cta,
+                     icon,
+                     onClick,
+                   }: {
+  eyebrow: string;
   title: string;
   description: string;
   cta: string;
-  href: string;
   icon: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-muted/10 p-5 relative overflow-hidden">
+    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-muted/10 p-6 md:p-7">
       <div className="pointer-events-none absolute inset-0 primary-gradient opacity-10 blur-3xl" />
 
-      <div className="relative space-y-3">
+      <div className="relative space-y-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-white/80">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/80">
             {icon}
           </div>
 
-          <p className="text-sm font-semibold text-white">{title}</p>
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+              {eyebrow}
+            </p>
+            <h3 className="text-2xl font-semibold text-white">{title}</h3>
+          </div>
         </div>
 
-        <p className="text-xs text-white/70 leading-relaxed">{description}</p>
+        <p className="max-w-2xl text-sm leading-relaxed text-white/70">
+          {description}
+        </p>
 
-        <div className="pt-2">
+        <div className="pt-1">
           <Button
-            className="bg-white/5 border border-white/10 text-white hover:bg-white/10"
-            onClick={() => (window.location.href = href)}
+            className="primary-gradient border-0 text-white hover:opacity-95"
+            onClick={onClick}
             type="button"
           >
             {cta}
-            <IconArrowRight className="h-4 w-4 ml-2" />
+            <IconArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-function RecentCard({
-  kind,
-  thumbnailUrl,
-  title,
-  subtitle,
-  chips,
-  primaryCta,
-  secondaryCta,
-}: {
+function QuickActionsCard({
+                            actions,
+                            onNavigate,
+                          }: {
+  actions: Array<{
+    label: string;
+    href: string;
+    icon: React.ReactNode;
+  }>;
+  onNavigate: (href: string) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-muted/10 p-5">
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-white">Quick actions</p>
+          <p className="text-xs text-muted-foreground">
+            Secondary actions — useful, but not your main focus.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {actions.map((action) => (
+            <Button
+              key={action.label}
+              className="border border-white/10 bg-white/5 text-white hover:bg-white/10"
+              onClick={() => onNavigate(action.href)}
+              type="button"
+            >
+              <span className="mr-2 inline-flex">{action.icon}</span>
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RecentCompactCard({
+                             kind,
+                             thumbnailUrl,
+                             title,
+                             subtitle,
+                             meta,
+                             onClick,
+                           }: {
   kind: string;
   thumbnailUrl?: string | null;
   title: string;
   subtitle: string;
-  chips?: string[];
-  primaryCta: { label: string; onClick: () => void };
-  secondaryCta?: {
-    label: string;
-    onClick: () => void;
-    variant?: "primary" | "ghost";
-    icon?: React.ReactNode;
-  };
+  meta?: string;
+  onClick: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-muted/10 overflow-hidden">
-      <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-black shrink-0">
+    <div className="rounded-2xl border border-white/10 bg-muted/10 p-4">
+      <div className="flex items-center gap-3">
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black">
           {thumbnailUrl ? (
-            <Image src={thumbnailUrl} alt="thumb" fill className="object-cover" sizes="80px" />
+            <Image
+              src={thumbnailUrl}
+              alt="thumbnail"
+              fill
+              className="object-cover"
+              sizes="48px"
+            />
           ) : (
-            <div className="h-full w-full flex items-center justify-center text-white/30 text-xs">—</div>
+            <div className="flex h-full w-full items-center justify-center text-xs text-white/30">
+              —
+            </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none">
-            <div className="absolute inset-0 primary-gradient opacity-30 mask-[linear-gradient(to_top,black,transparent)]" />
-          </div>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-white/60">{kind}</p>
-          <p className="text-sm font-semibold text-white truncate">{title}</p>
-          <p className="text-xs text-white/60 truncate">{subtitle}</p>
+          <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">
+            {kind}
+          </p>
+          <p className="truncate text-sm font-semibold text-white">{title}</p>
+          <p className="truncate text-xs text-white/60">{subtitle}</p>
 
-          {chips?.length ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {chips.map((c) => (
-                <span
-                  key={c}
-                  className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/70"
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
+          {meta ? (
+            <p className="mt-1 text-xs text-white/40">{meta}</p>
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button className="bg-white/5 border border-white/10 text-white hover:bg-white/10" onClick={primaryCta.onClick} type="button">
-            {primaryCta.label}
-          </Button>
-
-          {secondaryCta ? (
-            <Button
-              className={cn(
-                secondaryCta.variant === "primary"
-                  ? "primary-gradient text-white border-0 hover:opacity-95"
-                  : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-              )}
-              onClick={secondaryCta.onClick}
-              type="button"
-            >
-              {secondaryCta.icon ? <span className="mr-2 inline-flex">{secondaryCta.icon}</span> : null}
-              {secondaryCta.label}
-            </Button>
-          ) : null}
-        </div>
+        <Button
+          className={cn(
+            "border border-white/10 bg-white/5 text-white hover:bg-white/10"
+          )}
+          onClick={onClick}
+          type="button"
+        >
+          View
+        </Button>
       </div>
-    </div>
-  );
-}
-
-function OneScreenCta({
-  latestPhoto,
-  latestConvo,
-  latestProfile,
-}: {
-  latestPhoto: MediaAssetLike | null;
-  latestConvo: ConversationSnapshotLike | null;
-  latestProfile: ProfileLike | null;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-muted/10 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 primary-gradient opacity-10 blur-3xl" />
-
-      <div className="relative space-y-1">
-        <p className="text-sm font-semibold text-white">Want a clean “one-screen” AI plan?</p>
-        <p className="text-xs text-muted-foreground">
-          Open your latest AI review and implement one change today (photo swap or message rewrite).
-        </p>
-      </div>
-
-      <Button
-        className="primary-gradient text-white border-0 hover:opacity-95 relative"
-        onClick={() => {
-          const photoT = latestPhoto ? safeTime(latestPhoto.createdAt) : 0;
-          const convoT = latestConvo ? safeTime(latestConvo.createdAt) : 0;
-          const profileT = latestProfile ? safeTime(latestProfile.createdAt) : 0;
-
-          const target =
-            photoT >= convoT && photoT >= profileT
-              ? latestPhoto?.analysisId
-                ? `/ai-review/${latestPhoto.analysisId}`
-                : "/ai-review"
-              : convoT >= photoT && convoT >= profileT
-                ? latestConvo?.analysisId
-                  ? `/ai-review/${latestConvo.analysisId}`
-                  : "/ai-review"
-                : latestProfile?.analysisId
-                  ? `/ai-review/${latestProfile.analysisId}`
-                  : "/ai-review";
-
-          window.location.href = target;
-        }}
-        type="button"
-      >
-        <IconBrain className="h-5 w-5 mr-2" />
-        Open AI Review
-      </Button>
     </div>
   );
 }

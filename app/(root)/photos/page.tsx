@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { IMediaAssetDoc } from "@/database/media-asset.model";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +24,14 @@ import {Skeleton} from "@/components/ui/skeleton";
 type SortKey = "newest" | "oldest";
 
 export default function PhotosPage() {
+  const router = useRouter();
   const [mediaAssets, setMediaAssets] = useState<IMediaAssetDoc[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [sort, setSort] = useState<SortKey>("newest");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAsset, setPreviewAsset] = useState<IMediaAssetDoc | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAssets = async () => {
@@ -154,7 +157,7 @@ export default function PhotosPage() {
           <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
             {sorted.map((asset, idx) => {
               const id = asset._id.toString();
-              const uploaded = formatDate((asset as any).createdAt);
+              const uploaded = formatDate(asset.createdAt);
               const label = `Photo ${String(sorted.length - idx).padStart(2, "0")}`;
 
               return (
@@ -164,7 +167,7 @@ export default function PhotosPage() {
                 >
                   <div className="relative aspect-3/4 w-full sm:pb-0">
                     <Image
-                      src={(asset as any).blobUrl}
+                      src={asset.blobUrl ?? ""}
                       alt="user photo"
                       fill
                       className="object-cover"
@@ -191,7 +194,7 @@ export default function PhotosPage() {
                         size="icon"
                         variant="ghost"
                         className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                        onClick={() => handleDelete(id)}
+                        onClick={() => setPendingDeleteId(id)}
                         type="button"
                       >
                         <IconTrash className="h-5 w-5" />
@@ -201,9 +204,7 @@ export default function PhotosPage() {
                         size="icon"
                         variant="ghost"
                         className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                        onClick={() => {
-                          window.location.href = `/ai-review/${asset.analysisId}`;
-                        }}
+                        onClick={() => router.push(`/ai-review/${asset.analysisId?.toString()}`)}
                         type="button"
                       >
                         <IconBrain className="h-5 w-5" />
@@ -264,7 +265,7 @@ export default function PhotosPage() {
                     {/* subtle border frame */}
                     <div className="absolute inset-3 rounded-2xl border border-white/10 overflow-hidden bg-black">
                       <Image
-                        src={(previewAsset as any).blobUrl}
+                        src={previewAsset.blobUrl ?? ""}
                         alt="preview"
                         fill
                         className="object-contain"
@@ -280,7 +281,7 @@ export default function PhotosPage() {
                       <div className="relative p-3 z-10 space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Details</p>
                         <p className="text-xs text-white/85 leading-snug">
-                          Uploaded {formatDate((previewAsset as any).createdAt)} • ID{" "}
+                          Uploaded {formatDate(previewAsset.createdAt)} • ID{" "}
                           {shortId(previewAsset._id.toString())}
                         </p>
                       </div>
@@ -295,9 +296,7 @@ export default function PhotosPage() {
                     <div className="space-y-2 mb-8">
                       <Button
                         className="w-full"
-                        onClick={() => {
-                          window.location.href = `/ai-review/${(previewAsset as any).analysisId}`;
-                        }}
+                        onClick={() => router.push(`/ai-review/${previewAsset.analysisId?.toString()}`)}
                         type="button"
                       >
                         <IconBrain className="h-5 w-5 mr-2" />
@@ -306,7 +305,7 @@ export default function PhotosPage() {
 
                       <Button
                         className="w-full bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 hover:border-red-400/40"
-                        onClick={() => handleDelete(previewAsset._id.toString())}
+                        onClick={() => setPendingDeleteId(previewAsset._id.toString())}
                         type="button"
                       >
                         <IconTrash className="h-5 w-5 mr-2" />
@@ -318,6 +317,33 @@ export default function PhotosPage() {
               )}
             </DialogContent>
           </Dialog>
+
+        {/* Delete confirmation */}
+        <Dialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete photo?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will permanently remove the photo and its analysis. This can&apos;t be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button variant="ghost" onClick={() => setPendingDeleteId(null)} type="button">
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25"
+                onClick={() => {
+                  if (pendingDeleteId) void handleDelete(pendingDeleteId);
+                  setPendingDeleteId(null);
+                }}
+                type="button"
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         </>
       )}
