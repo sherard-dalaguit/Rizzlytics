@@ -43,6 +43,7 @@ export default function ProfilesPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewProfile, setPreviewProfile] = useState<IProfileDoc | null>(null);
   const [activeUrl, setActiveUrl] = useState<string>("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const isActive = (url: string) => url === activeUrl;
 
@@ -270,7 +271,7 @@ export default function ProfilesPage() {
                         size="icon"
                         variant="ghost"
                         className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                        onClick={() => handleDelete(id)}
+                        onClick={() => setPendingDeleteId(id)}
                         type="button"
                       >
                         <IconTrash className="h-5 w-5" />
@@ -410,7 +411,7 @@ export default function ProfilesPage() {
 
                         <Button
                           className="w-full bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 hover:border-red-400/40"
-                          onClick={() => handleDelete(previewProfile._id.toString())}
+                          onClick={() => setPendingDeleteId(previewProfile._id.toString())}
                           type="button"
                         >
                           <IconTrash className="h-5 w-5 mr-2" />
@@ -423,6 +424,33 @@ export default function ProfilesPage() {
               )}
             </DialogContent>
           </Dialog>
+        {/* Delete confirmation */}
+        <Dialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete profile?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will permanently remove the profile and its analysis. This can&apos;t be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button variant="ghost" onClick={() => setPendingDeleteId(null)} type="button">
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25"
+                onClick={() => {
+                  if (pendingDeleteId) void handleDelete(pendingDeleteId);
+                  setPendingDeleteId(null);
+                }}
+                type="button"
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         </>
       )}
     </main>

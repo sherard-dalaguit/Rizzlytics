@@ -49,6 +49,7 @@ export default function ConversationsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSnapshot, setPreviewSnapshot] = useState<IConversationSnapshotDoc | null>(null);
   const [activeUrl, setActiveUrl] = useState<string>("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const isActive = (url: string) => url === activeUrl;
 
@@ -287,7 +288,7 @@ export default function ConversationsPage() {
                         size="icon"
                         variant="ghost"
                         className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                        onClick={() => handleDelete(id)}
+                        onClick={() => setPendingDeleteId(id)}
                         type="button"
                       >
                         <IconTrash className="h-5 w-5" />
@@ -493,7 +494,7 @@ export default function ConversationsPage() {
 
                       <Button
                         className="w-full bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 hover:border-red-400/40"
-                        onClick={() => handleDelete(previewSnapshot._id.toString())}
+                        onClick={() => setPendingDeleteId(previewSnapshot._id.toString())}
                         type="button"
                       >
                         <IconTrash className="h-5 w-5 mr-2" />
@@ -505,6 +506,33 @@ export default function ConversationsPage() {
               )}
             </DialogContent>
           </Dialog>
+        {/* Delete confirmation */}
+        <Dialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete conversation?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will permanently remove the conversation and its analysis. This can&apos;t be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button variant="ghost" onClick={() => setPendingDeleteId(null)} type="button">
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25"
+                onClick={() => {
+                  if (pendingDeleteId) void handleDelete(pendingDeleteId);
+                  setPendingDeleteId(null);
+                }}
+                type="button"
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         </>
       )}
     </main>

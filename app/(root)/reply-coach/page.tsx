@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -41,6 +42,7 @@ export default function ReplyCoachPage() {
   const [analyses, setAnalyses] = useState<ReplyAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortKey>("newest");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -198,7 +200,7 @@ export default function ReplyCoachPage() {
                       size="icon"
                       variant="ghost"
                       className="h-9 w-9 rounded-full bg-black/55 text-white hover:bg-black/70"
-                      onClick={() => handleDelete(id)}
+                      onClick={() => setPendingDeleteId(id)}
                       type="button"
                     >
                       <IconTrash className="h-5 w-5" />
@@ -219,6 +221,33 @@ export default function ReplyCoachPage() {
           })}
         </section>
       )}
+
+      {/* Delete confirmation */}
+      <Dialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete session?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently remove the reply coach session. This can&apos;t be undone.
+          </p>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="ghost" onClick={() => setPendingDeleteId(null)} type="button">
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25"
+              onClick={() => {
+                if (pendingDeleteId) void handleDelete(pendingDeleteId);
+                setPendingDeleteId(null);
+              }}
+              type="button"
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
