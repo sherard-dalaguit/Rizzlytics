@@ -17,7 +17,7 @@ interface TranscriptMessage {
   text: string;
 }
 
-interface ReplyCoachResultsProps {
+interface QuickRepliesResultsProps {
   analysis: {
     _id: string;
     createdAt: string;
@@ -50,11 +50,11 @@ const momentumConfig = {
   },
 };
 
-export default function ReplyCoachResults({
+export default function QuickRepliesResults({
   analysis,
   transcript,
   contextText,
-}: ReplyCoachResultsProps) {
+}: QuickRepliesResultsProps) {
   const { result } = analysis;
   const momentum = result.momentum ?? "stalling";
   const replies = result.replies ?? [];
@@ -68,7 +68,7 @@ export default function ReplyCoachResults({
         <div className="relative space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-4xl font-semibold leading-tight primary-text-gradient">
-              Reply Coach
+              Quick Replies
             </h1>
             <span
               className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${mc.classes}`}

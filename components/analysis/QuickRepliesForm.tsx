@@ -19,7 +19,7 @@ type UploadResponse = {
   mediaAsset: IMediaAssetDoc;
 };
 
-const ReplyCoachForm = () => {
+const QuickRepliesForm = () => {
   const router = useRouter();
   const session = useSession();
   const user = session.data?.user;
@@ -124,7 +124,7 @@ const ReplyCoachForm = () => {
 
       setBusyDetail("Generating reply options…");
 
-      const analyzeRes = await fetch(`/api/ai-analysis/reply-coach/${conversationSnapshot._id}`, {
+      const analyzeRes = await fetch(`/api/ai-analysis/quick-replies/${conversationSnapshot._id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -177,7 +177,7 @@ const ReplyCoachForm = () => {
           <div className="relative">
             <DialogHeader className="space-y-1">
               <DialogTitle className="text-xl font-semibold text-white">
-                Reply Coach
+                Quick Replies
               </DialogTitle>
               <p className="text-sm text-zinc-400">
                 Screenshot your active conversation. Get 4–6 reply options in seconds.
@@ -354,4 +354,4 @@ const ReplyCoachForm = () => {
   );
 };
 
-export default ReplyCoachForm;
+export default QuickRepliesForm;

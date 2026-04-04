@@ -7,7 +7,7 @@ import {
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import CopyButton from "@/components/ai-review/CopyButton";
-import ReplyCoachResults from "@/components/analysis/ReplyCoachResults";
+import QuickRepliesResults from "@/components/analysis/QuickRepliesResults";
 import TakeawayCard from "@/components/analysis/TakeawayCard";
 import Image from "next/image";
 import {
@@ -118,13 +118,13 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { result } = analysis;
 
   // 2) Reply coach — separate layout, return early
-  if (analysis.type === "reply_coach") {
+  if (analysis.type === "quick_replies") {
     const conversation = analysis.conversationId ?? null;
     const transcript = (conversation as any)?.transcript ?? [];
     const contextText = (conversation as any)?.contextInput ?? null;
 
     return (
-      <ReplyCoachResults
+      <QuickRepliesResults
         analysis={analysis}
         transcript={transcript}
         contextText={contextText}
@@ -514,14 +514,14 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
               <div>
                 <p className="text-sm font-semibold text-white">Still texting?</p>
                 <p className="text-sm text-zinc-400 mt-0.5 leading-relaxed">
-                  Use Reply Coach to get live reply options for an active conversation — not a post-mortem.
+                  Use Quick Replies to get live reply options for an active conversation — not a post-mortem.
                 </p>
               </div>
               <a
                 href="/ai-review"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/8 transition-colors"
               >
-                Open Reply Coach →
+                Open Quick Replies →
               </a>
             </div>
           )}

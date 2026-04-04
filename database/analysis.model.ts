@@ -3,7 +3,7 @@ import { model, models, Schema, Types, Document } from "mongoose";
 export interface IAnalysis {
   userId: Types.ObjectId;
 
-  type: "photo" | "conversation" | "profile" | "reply_coach";
+  type: "photo" | "conversation" | "profile" | "quick_replies";
   status: "queued" | "succeeded" | "failed";
 
   conversationId?: Types.ObjectId;
@@ -58,7 +58,7 @@ const AnalysisSchema = new Schema<IAnalysis>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
-    type: { type: String, enum: ["photo", "conversation", "profile", "reply_coach"], required: true },
+    type: { type: String, enum: ["photo", "conversation", "profile", "quick_replies"], required: true },
     status: { type: String, enum: ["queued", "succeeded", "failed"], required: true },
 
     conversationId: { type: Schema.Types.ObjectId, ref: "ConversationSnapshot" },

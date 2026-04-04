@@ -37,7 +37,7 @@ const momentumConfig: Record<Momentum, { label: string; classes: string }> = {
 
 type SortKey = "newest" | "oldest";
 
-export default function ReplyCoachPage() {
+export default function QuickRepliesPage() {
   const router = useRouter();
   const [analyses, setAnalyses] = useState<ReplyAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ export default function ReplyCoachPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/ai-analysis?type=reply_coach");
+        const res = await fetch("/api/ai-analysis?type=quick_replies");
         if (!res.ok) throw new Error("Failed to fetch");
         const { analyses } = await res.json();
         setAnalyses(analyses);
@@ -86,7 +86,7 @@ export default function ReplyCoachPage() {
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl primary-text-gradient font-semibold">Reply Coach</h1>
+            <h1 className="text-4xl primary-text-gradient font-semibold">Quick Replies</h1>
             <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300 ring-1 ring-emerald-500/20">
               <IconBolt className="h-3 w-3 mr-1" />
               Live
@@ -138,9 +138,9 @@ export default function ReplyCoachPage() {
               <IconBolt className="h-6 w-6 text-emerald-300" />
             </div>
           </div>
-          <p className="text-lg font-medium">No reply coach sessions yet</p>
+          <p className="text-lg font-medium">No quick reply sessions yet</p>
           <p className="text-sm text-muted-foreground mt-2">
-            Use Reply Coach on the AI Review page while you&apos;re in an active conversation.
+            Use Quick Replies on the AI Review page while you&apos;re in an active conversation.
           </p>
           <Button
             className="mt-5 primary-gradient text-white"
@@ -229,7 +229,7 @@ export default function ReplyCoachPage() {
             <DialogTitle>Delete session?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will permanently remove the reply coach session. This can&apos;t be undone.
+            This will permanently remove the quick reply session. This can&apos;t be undone.
           </p>
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="ghost" onClick={() => setPendingDeleteId(null)} type="button">

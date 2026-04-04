@@ -76,16 +76,16 @@ export async function GET(_: Request): Promise<NextResponse> {
     })
     .lean();
 
-  // Exclude snapshots linked to reply_coach analyses
-  const replyCoachAnalysisIds = await Analysis
-    .find({ userId: user.id, type: "reply_coach" })
+  // Exclude snapshots linked to quick_replies analyses
+  const quickRepliesAnalysisIds = await Analysis
+    .find({ userId: user.id, type: "quick_replies" })
     .distinct("conversationId");
 
-  const replyCoachSet = new Set(replyCoachAnalysisIds.map((id: any) => id.toString()));
+  const quickRepliesSet = new Set(quickRepliesAnalysisIds.map((id: any) => id.toString()));
 
   const conversationSnapshots = allSnapshots.filter((snap: any) => {
     const snapId = snap._id.toString();
-    return !replyCoachSet.has(snapId);
+    return !quickRepliesSet.has(snapId);
   });
 
   return NextResponse.json({ conversationSnapshots });

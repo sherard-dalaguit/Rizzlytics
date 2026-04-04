@@ -23,8 +23,8 @@ export const navbarLinks = [
   },
   {
     icon: <IconBolt className="w-6 h-6" />,
-    label: "Reply Coach",
-    route: "/reply-coach"
+    label: "Quick Replies",
+    route: "/quick-replies"
   },
   {
     icon: <IconBrain className="w-6 h-6" />,

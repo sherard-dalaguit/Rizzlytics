@@ -9,7 +9,7 @@ import {
 import PhotoAnalysis from "@/components/analysis/PhotoAnalysis";
 import ConversationAnalysis from "@/components/analysis/ConversationAnalysis";
 import ProfileAnalysis from "@/components/analysis/ProfileAnalysis";
-import ReplyCoachForm from "@/components/analysis/ReplyCoachForm";
+import QuickRepliesForm from "@/components/analysis/QuickRepliesForm";
 import { cn } from "@/lib/utils";
 
 type ToolCardProps = {
@@ -155,13 +155,13 @@ export default function AIReview() {
         </ToolCard>
 
         <ToolCard
-          title="Reply Coach"
+          title="Quick Replies"
           description="You're mid-conversation and not sure what to say. Screenshot it, get 4-6 reply options with reasoning in seconds. Use this while you're actively texting - not after."
           icon={<IconBolt />}
           chip="Live"
           accent="green"
         >
-          <ReplyCoachForm />
+          <QuickRepliesForm />
         </ToolCard>
 
         <ToolCard

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import runReplyCoach from "@/lib/server/analysis/runReplyCoach";
+import runQuickReplies from "@/lib/server/analysis/runQuickReplies";
 import dbConnect from "@/lib/mongoose";
 import Analysis from "@/database/analysis.model";
 import { ITranscriptMessage } from "@/database/conversation-snapshot.model";
@@ -22,13 +22,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Missing or empty "transcript".' }, { status: 400 });
   }
 
-  const coachResult = await runReplyCoach({ transcript, contextInput, otherProfileContext });
+  const coachResult = await runQuickReplies({ transcript, contextInput, otherProfileContext });
 
   await dbConnect();
 
   const analysis = await Analysis.create({
     userId,
-    type: "reply_coach",
+    type: "quick_replies",
     status: "succeeded",
     conversationId: id,
     result: coachResult,
