@@ -136,7 +136,7 @@ export default function AIReview() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ToolCard
           title="Photos"
-          description="Analyze one photo to improve first impressions: lighting, framing, style, and vibe."
+          description="Upload a photo and get honest feedback on lighting, pose, background, and expression — so you know exactly what to keep, fix, or swap out."
           icon={<IconPhoto />}
           chip="Single"
           accent="pink"
@@ -146,7 +146,7 @@ export default function AIReview() {
 
         <ToolCard
           title="Profiles"
-          description="Analyze a set of photos together to optimize your overall profile story and consistency."
+          description="Upload your full photo lineup and find out which photos to lead with, which to cut, and whether your set tells a coherent story."
           icon={<IconLayersSubtract />}
           chip="Set"
           accent="violet"
