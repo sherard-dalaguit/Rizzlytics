@@ -24,7 +24,34 @@ function fileKey(file: File) {
 }
 
 function useObjectUrls(files: File[]) {
-  return React.useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  const [urlMap, setUrlMap] = React.useState<Map<string, string>>(new Map());
+
+  React.useEffect(() => {
+    setUrlMap((prev) => {
+      const next = new Map<string, string>();
+      for (const file of files) {
+        const key = fileKey(file);
+        next.set(key, prev.get(key) ?? URL.createObjectURL(file));
+      }
+      // revoke URLs for files no longer in the list
+      for (const [key, url] of prev) {
+        if (!next.has(key)) URL.revokeObjectURL(url);
+      }
+      return next;
+    });
+  }, [files]);
+
+  // revoke all on unmount
+  React.useEffect(() => {
+    return () => {
+      setUrlMap((prev) => {
+        prev.forEach((url) => URL.revokeObjectURL(url));
+        return new Map();
+      });
+    };
+  }, []);
+
+  return files.map((f) => urlMap.get(fileKey(f)) ?? null);
 }
 
 export default function ReorderableFileGrid({
@@ -45,12 +72,6 @@ export default function ReorderableFileGrid({
     for (const f of files) next[fileKey(f)] = false;
     setLoadedMap(next);
   }, [files]);
-
-  React.useEffect(() => {
-    return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u));
-    };
-  }, [urls]);
 
   if (!files.length) return null;
 
@@ -96,18 +117,19 @@ export default function ReorderableFileGrid({
             </button>
 
             <div className="relative aspect-square w-full bg-white/[0.03]">
-              <Image
-                src={url}
-                alt=""
-                fill
-                className="object-contain"
-                // key detail: mark THIS file as loaded
-                onLoadingComplete={() =>
-                  setLoadedMap((prev) => ({ ...prev, [key]: true }))
-                }
-              />
+              {url && (
+                <Image
+                  src={url}
+                  alt=""
+                  fill
+                  className="object-contain"
+                  onLoadingComplete={() =>
+                    setLoadedMap((prev) => ({ ...prev, [key]: true }))
+                  }
+                />
+              )}
 
-              {!loaded && <div className="absolute inset-0 animate-pulse bg-white/[0.04]" />}
+              {(!url || !loaded) && <div className="absolute inset-0 animate-pulse bg-white/[0.04]" />}
             </div>
 
             <div className="border-t border-white/10 px-2 py-2">

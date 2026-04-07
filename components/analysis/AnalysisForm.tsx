@@ -653,7 +653,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           {threadFiles.length > 0 && (
                             <div className="mt-5">
                               <p className="text-xs tracking-wide text-zinc-500 mb-2">
-                                Reorder before upload | Images won&apos;t load until re-ordered
+                                Drag to reorder before uploading
                               </p>
 
                               <ReorderableFileGrid files={threadFiles} setFiles={setThreadFiles} />
@@ -690,7 +690,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           {otherFiles.length > 0 && (
                             <div className="mt-5">
                               <p className="text-xs tracking-wide text-zinc-500 mb-2">
-                                Reorder before upload | Images won&apos;t load until re-ordered
+                                Drag to reorder before uploading
                               </p>
 
                               <ReorderableFileGrid files={otherFiles} setFiles={setOtherFiles} />
@@ -761,7 +761,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
                           {profileFiles.length > 0 && (
                             <div className="mt-5">
                               <p className="text-xs tracking-wide text-zinc-500 mb-2">
-                                Order matters (1 = first photo) | Images won&apos;t load until re-ordered
+                                Order matters — drag to reorder (1 = first photo)
                               </p>
 
                               <ReorderableFileGrid files={profileFiles} setFiles={setProfileFiles} />
