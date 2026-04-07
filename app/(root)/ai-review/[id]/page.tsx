@@ -193,41 +193,135 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     uncertain: result.attractionSignals?.uncertain ?? [],
   };
 
+  const diagnosisIntroMap: Record<string, string> = {
+    photo: "Why it works — and what keeps it from performing even better.",
+    profile: "Here’s the deeper read behind the first impression.",
+    conversation: "Here’s the breakdown behind the overall read.",
+  };
+
+  const diagnosisIntro = diagnosisIntroMap[analysis.type] ?? "Here’s the deeper breakdown behind the overall result.";
+
   return (
     <main className="max-w-7xl mx-auto px-6 py-10">
       {/* ================= HERO HEADER ================= */}
       <section className="mb-10">
-        <div className="rounded-2xl border bg-muted/20 px-6 py-6 relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 opacity-30 primary-gradient blur-3xl" />
-          <div className="relative">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <h1 className="text-4xl font-semibold leading-tight primary-text-gradient">
-                  {capitalize(analysis.type)} Analysis
-                </h1>
+        {(() => {
+          const outcome = (result.rating?.overall ?? "mixed").toLowerCase();
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{capitalize(analysis.status)}</Badge>
-                  {(() => {
-                    const outcome = (result.rating?.overall ?? "mixed").toLowerCase();
-                    const config: Record<string, { label: string; className: string }> = {
-                      poor: { label: "Needs work", className: "bg-red-500/15 text-red-400 ring-1 ring-red-500/30" },
-                      mixed: { label: "Mixed signals", className: "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30" },
-                      good: { label: "Looking good", className: "bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30" },
-                      strong: { label: "Strong", className: "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30" },
-                    };
-                    const { label, className } = config[outcome] ?? config.mixed;
-                    return (
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>
-                        {label}
-                      </span>
-                    );
-                  })()}
+          const config: Record<
+            string,
+            {
+              label: string;
+              shortLabel: string;
+              className: string;
+              score: string;
+              summary: string;
+            }
+          > = {
+            poor: {
+              label: "Needs work",
+              shortLabel: "POOR",
+              className:
+                "bg-red-500/15 text-red-400 ring-1 ring-red-500/30",
+              score: "4.8",
+              summary:
+                "This read is currently weak overall and likely needs stronger fundamentals before it works well in-app.",
+            },
+            mixed: {
+              label: "Mixed signals",
+              shortLabel: "MIXED",
+              className:
+                "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30",
+              score: "6.5",
+              summary:
+                "There’s clear potential here, but a few issues are holding back the first impression.",
+            },
+            good: {
+              label: "Looking good",
+              shortLabel: "GOOD",
+              className:
+                "bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30",
+              score: "7.8",
+              summary:
+                "This is a solid overall read with attractive signals, though a few refinements could lift conversion further.",
+            },
+            strong: {
+              label: "Strong",
+              shortLabel: "STRONG",
+              className:
+                "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30",
+              score: "8.8",
+              summary:
+                "This lands as a strong, high-conviction impression with only minor optimizations needed.",
+            },
+          };
+
+          const current = config[outcome] ?? config.mixed;
+          const heroSummary = headline?.trim()?.length > 0 ? headline : current.summary;
+
+          return (
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-muted/20 px-6 py-6 md:px-8 md:py-8">
+              <div className="pointer-events-none absolute inset-0 opacity-25 primary-gradient blur-3xl" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px primary-gradient opacity-80" />
+
+              <div className="relative grid gap-6 md:grid-cols-[auto,1fr] md:items-center">
+                <div className="min-w-0 space-y-4">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h1 className="text-3xl font-semibold leading-tight primary-text-gradient md:text-4xl">
+                          {capitalize(analysis.type)} Analysis
+                        </h1>
+
+                        <p className="max-w-3xl text-base leading-relaxed text-white/80 md:text-lg">
+                          {heroSummary}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${current.className}`}>
+                          {current.label}
+                        </span>
+
+                        <div className="rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-xs text-white/75">
+                          {sections.positive.length} positive signals
+                        </div>
+
+                        <div className="rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-xs text-white/75">
+                          {sections.negative.length} negative signals
+                        </div>
+
+                        <div className="rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-xs text-white/75">
+                          {result.nextSteps?.length ?? 0} next steps
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-end gap-3 xl:flex-col xl:items-end xl:text-right">
+                      <div className="leading-none">
+                        <div className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+                          {current.score}
+                          <span className="ml-1 text-lg text-muted-foreground md:text-xl">
+                            /10
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold tracking-[0.18em] text-white/70">
+                          {current.shortLabel}
+                        </p>
+                        <p className="text-xs text-white/55">
+                          First-impression read
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </section>
 
       {/* ================= LAYOUT ================= */}
@@ -245,7 +339,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
             <div className="rounded-2xl border bg-muted/30 p-6 space-y-4 relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-0.5 primary-gradient opacity-80" />
-              <p className="text-lg font-medium leading-relaxed">{headline}</p>
+              <p className="text-lg font-medium leading-relaxed">
+                {diagnosisIntro}
+              </p>
 
               {bullets.length > 0 && (
                 <ul className="space-y-2 text-sm text-muted-foreground">
