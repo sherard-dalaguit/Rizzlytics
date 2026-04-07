@@ -35,6 +35,7 @@ const AnalysisForm = ({ type }: { type: string }) => {
   const inputFileRef = useRef<HTMLInputElement>(null);
   const [blob, setBlob] = useState<PutBlobResult | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [threadFiles, setThreadFiles] = useState<File[]>([]);
   const [otherFiles, setOtherFiles] = useState<File[]>([]);
@@ -81,7 +82,8 @@ const AnalysisForm = ({ type }: { type: string }) => {
       inputFileRef.current.files = dt.files;
     }
 
-    console.log(files);
+    if (files[0]) setPreviewUrl(URL.createObjectURL(files[0]));
+    else setPreviewUrl(null);
   };
 
   const getSelectedFiles = (): File[] => {
@@ -598,18 +600,18 @@ const AnalysisForm = ({ type }: { type: string }) => {
                         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                           <p className="text-sm font-semibold text-white">Preview</p>
 
-                          <div className="mt-3 relative aspect-4/5 w-full overflow-hidden rounded-xl border border-white/10 bg-white/2 flex items-center justify-center">
-                            {blob ? (
+                          <div className="mt-3 relative w-full h-64 lg:h-72 overflow-hidden rounded-xl border border-white/10 bg-white/2 flex items-center justify-center">
+                            {previewUrl ? (
                               <Image
-                                key={blob.pathname}
-                                src={blob.url}
-                                alt="uploaded photo"
+                                key={previewUrl}
+                                src={previewUrl}
+                                alt="selected photo"
                                 fill
                                 className="object-contain"
                               />
                             ) : (
                               <div className="text-sm text-zinc-500 px-6 text-center">
-                                Upload a photo to preview it here.
+                                Select a photo to preview it here.
                               </div>
                             )}
                           </div>
