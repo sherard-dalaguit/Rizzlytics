@@ -18,8 +18,8 @@ export const AnalysisOutputSchema = z.object({
   strengths: z.array(z.string().min(1)),
   weaknesses: z.array(z.string().min(1)),
   attractionSignals: z.object({
-    positive: z.array(z.string().min(1)).min(3).max(5),
-    negative: z.array(z.string().min(1)).min(3).max(5),
+    positive: z.array(z.string().min(1)).max(5),
+    negative: z.array(z.string().min(1)).max(5),
     uncertain: z.array(z.string().min(1)).max(3),
   }),
 
@@ -157,9 +157,22 @@ const runAIReview = async (args:
     ────────────────────────
     Return 3 categories. “strengths” and “weaknesses” MUST be [] — do not populate them.
 
-    - positive (3–5 bullets): What's working and why. Full sentences. What is happening + why it matters for this specific input.
-    - negative (3–5 bullets): What's hurting it and why. Include what to do differently in the same sentence.
-    - uncertain (2–3 bullets): High-impact signals that could read positively or negatively depending on the audience. Explain both readings briefly.
+    - positive (0–5 bullets): What's genuinely working and why. Only include real positives you can point to specifically.
+    - negative (0–5 bullets): What's genuinely hurting it and why. Include what to do differently in the same sentence.
+    - uncertain (0–3 bullets): High-impact signals that could read positively or negatively depending on the audience. Explain both readings briefly.
+
+    DO NOT INVENT SIGNALS TO APPEAR BALANCED.
+    - If an input is clearly weak, negative may have 4–5 items and positive may have 0–1. That is correct.
+    - If an input is clearly strong, positive may have 4–5 items and negative may have 0–1. That is correct.
+    - Never fabricate a positive to soften bad feedback. Never fabricate a negative to seem thorough on strong inputs.
+    - Only include a signal if you can point to something specific in the input that justifies it.
+
+    NEGATIVE SIGNAL THRESHOLD (IMPORTANT):
+    Before adding a negative signal, ask: "Would a reasonable person scrolling dating profiles actually notice this and swipe left because of it?"
+    - If no → do not include it.
+    - Minor technical imperfections (slight warmth, small shadows, soft focus) on otherwise strong photos are NOT negatives — they are noise.
+    - Intentional stylistic choices (hair placement, composition framing, clothing) are NOT negatives unless they genuinely confuse or reduce attraction for the intended audience.
+    - Do not manufacture criticisms to fill space. A strong input with 1 real negative should return 1 negative — not 4 minor nitpicks padded out.
 
     Rules:
     - Be specific and grounded in the input. No vague traits.
